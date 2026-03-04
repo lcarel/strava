@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strava Stats</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Landing ───────────────────────────────────────────────────────────── -->
+  <div id="landing" class="page">
+    <div class="hero">
+      <div class="logo">⚡</div>
+      <h1>Strava <span class="accent">Stats</span></h1>
+      <p class="subtitle">Tes activités de la semaine · Classement entre amis</p>
+      <a href="/api/auth/strava" class="btn-strava">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+        </svg>
+        Se connecter avec Strava
+      </a>
+    </div>
+  </div>
+
+  <!-- ── App ───────────────────────────────────────────────────────────────── -->
+  <div id="app" class="page hidden">
+
+    <header>
+      <div class="header-left">
+        <div class="logo-sm">⚡</div>
+        <h1>Strava Stats</h1>
+      </div>
+      <div class="header-right">
+        <div class="athlete-badge" id="athlete-badge"></div>
+        <button id="logout-btn" class="btn-logout">Déconnecter</button>
+      </div>
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="my-stats">Mes stats</button>
+      <button class="tab" data-tab="leaderboard">Classement</button>
+    </nav>
+
+    <main>
+
+      <!-- ── My stats tab ─────────────────────────────────────────────────── -->
+      <div id="my-stats" class="tab-content">
+        <div class="week-label" id="week-label">Cette semaine</div>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon">🏃</div>
+            <div class="card-value" id="total-count">–</div>
+            <div class="card-label">Activités</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">📍</div>
+            <div class="card-value" id="total-distance">–</div>
+            <div class="card-label">Distance</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">⏱️</div>
+            <div class="card-value" id="total-time">–</div>
+            <div class="card-label">Temps total</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">⛰️</div>
+            <div class="card-value" id="total-elevation">–</div>
+            <div class="card-label">Dénivelé +</div>
+          </div>
+        </div>
+
+        <div id="sport-section" class="hidden">
+          <h2 class="section-title">Par sport</h2>
+          <div class="sport-grid" id="sport-grid"></div>
+        </div>
+
+        <div id="activities-section" class="hidden">
+          <h2 class="section-title">Activités</h2>
+          <div class="activity-list" id="activity-list"></div>
+        </div>
+
+        <div id="empty-state" class="empty-state hidden">
+          <span>😴</span>
+          <p>Aucune activité cette semaine — c'est le moment de sortir !</p>
+        </div>
+
+        <div id="stats-loading" class="loading hidden">
+          <div class="spinner"></div><p>Chargement...</p>
+        </div>
+      </div>
+
+      <!-- ── Leaderboard tab ──────────────────────────────────────────────── -->
+      <div id="leaderboard" class="tab-content hidden">
+        <div class="leaderboard-header">
+          <div class="week-label" id="lb-week-label">Cette semaine</div>
+          <div class="metric-selector">
+            <span class="metric-label">Trier par :</span>
+            <div class="metric-btns">
+              <button class="metric-btn active" data-metric="distance">Distance</button>
+              <button class="metric-btn" data-metric="time">Temps</button>
+              <button class="metric-btn" data-metric="activities">Activités</button>
+              <button class="metric-btn" data-metric="elevation">Dénivelé</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="lb-loading" class="loading hidden">
+          <div class="spinner"></div><p>Chargement...</p>
+        </div>
+
+        <div id="lb-list" class="lb-list"></div>
+
+        <div id="lb-empty" class="empty-state hidden">
+          <span>👥</span>
+          <p>Aucun autre athlète connecté pour l'instant.<br>Partage le lien de l'app !</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
