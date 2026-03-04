@@ -13,7 +13,7 @@
     <div class="hero">
       <div class="logo">⚡</div>
       <h1>Strava <span class="accent">Stats</span></h1>
-      <p class="subtitle">Tes activités de la semaine · Classement entre amis</p>
+      <p class="subtitle">Tes activités · Classement · Ligues entre amis</p>
       <a href="/api/auth/strava" class="btn-strava">
         <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
           <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
@@ -37,68 +37,36 @@
       </div>
     </header>
 
-    <!-- Tab bar -->
     <nav class="tabs">
       <button class="tab active" data-tab="my-stats">Mes stats</button>
       <button class="tab" data-tab="leaderboard">Classement</button>
+      <button class="tab" data-tab="leagues">Ligues</button>
     </nav>
 
     <main>
 
-      <!-- ── My stats tab ─────────────────────────────────────────────────── -->
+      <!-- ── My stats ──────────────────────────────────────────────────────── -->
       <div id="my-stats" class="tab-content">
         <div class="week-label" id="week-label">Cette semaine</div>
-
         <div class="cards-grid">
-          <div class="card">
-            <div class="card-icon">🏃</div>
-            <div class="card-value" id="total-count">–</div>
-            <div class="card-label">Activités</div>
-          </div>
-          <div class="card">
-            <div class="card-icon">📍</div>
-            <div class="card-value" id="total-distance">–</div>
-            <div class="card-label">Distance</div>
-          </div>
-          <div class="card">
-            <div class="card-icon">⏱️</div>
-            <div class="card-value" id="total-time">–</div>
-            <div class="card-label">Temps total</div>
-          </div>
-          <div class="card">
-            <div class="card-icon">⛰️</div>
-            <div class="card-value" id="total-elevation">–</div>
-            <div class="card-label">Dénivelé +</div>
-          </div>
+          <div class="card"><div class="card-icon">🏃</div><div class="card-value" id="total-count">–</div><div class="card-label">Activités</div></div>
+          <div class="card"><div class="card-icon">📍</div><div class="card-value" id="total-distance">–</div><div class="card-label">Distance</div></div>
+          <div class="card"><div class="card-icon">⏱️</div><div class="card-value" id="total-time">–</div><div class="card-label">Temps total</div></div>
+          <div class="card"><div class="card-icon">⛰️</div><div class="card-value" id="total-elevation">–</div><div class="card-label">Dénivelé +</div></div>
         </div>
-
-        <div id="sport-section" class="hidden">
-          <h2 class="section-title">Par sport</h2>
-          <div class="sport-grid" id="sport-grid"></div>
-        </div>
-
-        <div id="activities-section" class="hidden">
-          <h2 class="section-title">Activités</h2>
-          <div class="activity-list" id="activity-list"></div>
-        </div>
-
-        <div id="empty-state" class="empty-state hidden">
-          <span>😴</span>
-          <p>Aucune activité cette semaine — c'est le moment de sortir !</p>
-        </div>
-
-        <div id="stats-loading" class="loading hidden">
-          <div class="spinner"></div><p>Chargement...</p>
-        </div>
+        <div id="sport-section" class="hidden"><h2 class="section-title">Par sport</h2><div class="sport-grid" id="sport-grid"></div></div>
+        <div id="activities-section" class="hidden"><h2 class="section-title">Activités</h2><div class="activity-list" id="activity-list"></div></div>
+        <div id="empty-state" class="empty-state hidden"><span>😴</span><p>Aucune activité cette semaine — c'est le moment de sortir !</p></div>
+        <div id="stats-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
       </div>
 
-      <!-- ── Leaderboard tab ──────────────────────────────────────────────── -->
+      <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
       <div id="leaderboard" class="tab-content hidden">
         <div class="leaderboard-header">
           <div class="week-label" id="lb-week-label">Cette semaine</div>
           <div class="metric-selector">
             <span class="metric-label">Trier par :</span>
-            <div class="metric-btns">
+            <div class="metric-btns" id="lb-metric-btns">
               <button class="metric-btn active" data-metric="distance">Distance</button>
               <button class="metric-btn" data-metric="time">Temps</button>
               <button class="metric-btn" data-metric="activities">Activités</button>
@@ -106,20 +74,92 @@
             </div>
           </div>
         </div>
+        <div id="lb-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="lb-list" class="lb-list"></div>
+        <div id="lb-empty" class="empty-state hidden"><span>👥</span><p>Aucun autre athlète connecté pour l'instant.</p></div>
+      </div>
 
-        <div id="lb-loading" class="loading hidden">
-          <div class="spinner"></div><p>Chargement...</p>
+      <!-- ── Leagues ───────────────────────────────────────────────────────── -->
+      <div id="leagues" class="tab-content hidden">
+
+        <!-- League list view -->
+        <div id="leagues-list-view">
+          <div class="leagues-actions">
+            <button class="btn-action" id="open-create-modal">
+              <span>+</span> Créer une ligue
+            </button>
+            <button class="btn-action btn-action-ghost" id="open-join-modal">
+              Rejoindre avec un code
+            </button>
+          </div>
+          <div id="leagues-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+          <div id="leagues-grid" class="leagues-grid"></div>
+          <div id="leagues-empty" class="empty-state hidden">
+            <span>🏆</span>
+            <p>Pas encore de ligue.<br>Crée-en une et invite tes amis !</p>
+          </div>
         </div>
 
-        <div id="lb-list" class="lb-list"></div>
+        <!-- League detail view -->
+        <div id="league-detail-view" class="hidden">
+          <div class="league-detail-header">
+            <button id="back-to-leagues" class="btn-back">← Ligues</button>
+            <div class="league-detail-title">
+              <h2 id="league-detail-name"></h2>
+              <div class="league-code-row">
+                <span class="league-code-label">Code d'invitation :</span>
+                <span class="league-code-badge" id="league-detail-code"></span>
+                <button class="btn-copy" id="copy-code-btn" title="Copier">📋</button>
+              </div>
+            </div>
+            <button id="leave-league-btn" class="btn-leave">Quitter</button>
+          </div>
 
-        <div id="lb-empty" class="empty-state hidden">
-          <span>👥</span>
-          <p>Aucun autre athlète connecté pour l'instant.<br>Partage le lien de l'app !</p>
+          <div class="leaderboard-header">
+            <div class="week-label" id="league-week-label">Cette semaine</div>
+            <div class="metric-selector">
+              <span class="metric-label">Trier par :</span>
+              <div class="metric-btns" id="league-metric-btns">
+                <button class="metric-btn active" data-metric="distance">Distance</button>
+                <button class="metric-btn" data-metric="time">Temps</button>
+                <button class="metric-btn" data-metric="activities">Activités</button>
+                <button class="metric-btn" data-metric="elevation">Dénivelé</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="league-lb-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+          <div id="league-lb-list" class="lb-list"></div>
+          <div id="league-lb-empty" class="empty-state hidden"><span>🏃</span><p>Personne n'a encore bougé cette semaine !</p></div>
         </div>
       </div>
 
     </main>
+  </div>
+
+  <!-- ── Modals ─────────────────────────────────────────────────────────────── -->
+  <div id="create-modal" class="modal hidden" role="dialog">
+    <div class="modal-box">
+      <h2>Créer une ligue</h2>
+      <p class="modal-sub">Un code unique sera généré pour inviter tes amis.</p>
+      <input id="create-name-input" class="modal-input" type="text" placeholder="Nom de la ligue..." maxlength="40" />
+      <div class="modal-actions">
+        <button id="create-submit-btn" class="btn-primary">Créer</button>
+        <button class="modal-cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="join-modal" class="modal hidden" role="dialog">
+    <div class="modal-box">
+      <h2>Rejoindre une ligue</h2>
+      <p class="modal-sub">Entre le code partagé par ton ami.</p>
+      <input id="join-code-input" class="modal-input" type="text" placeholder="Ex : A3F8C2" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:1.3rem;text-align:center" />
+      <div class="modal-actions">
+        <button id="join-submit-btn" class="btn-primary">Rejoindre</button>
+        <button class="modal-cancel">Annuler</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

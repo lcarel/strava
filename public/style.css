@@ -399,6 +399,257 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Leagues actions ─────────────────────────────────────────────────────────── */
+.leagues-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.3rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.btn-action:hover { background: var(--orange-dark); transform: translateY(-1px); }
+
+.btn-action-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-action-ghost:hover { background: var(--surface-2); color: var(--text); border-color: var(--muted); transform: none; }
+
+/* ── League cards grid ───────────────────────────────────────────────────────── */
+.leagues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.league-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative;
+}
+
+.league-card:hover { border-color: var(--orange); transform: translateY(-2px); }
+
+.league-card-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+  padding-right: 2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.league-card-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.league-pill {
+  background: var(--surface-2);
+  border-radius: 20px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.league-pill.rank { color: var(--orange); font-weight: 700; }
+
+.league-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+/* ── League detail ───────────────────────────────────────────────────────────── */
+.league-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-back:hover { color: var(--text); }
+
+.league-detail-title { flex: 1; min-width: 0; }
+
+.league-detail-title h2 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+}
+
+.league-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.league-code-label { font-size: 0.8rem; color: var(--muted); }
+
+.league-code-badge {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--orange);
+  background: rgba(252,76,2,0.1);
+  border: 1px solid rgba(252,76,2,0.3);
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+}
+
+.btn-copy {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.btn-copy:hover { opacity: 1; }
+
+.btn-leave {
+  background: transparent;
+  border: 1px solid #e53e3e44;
+  color: #fc8181;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.btn-leave:hover { background: rgba(229,62,62,0.12); border-color: #fc8181; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+}
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  animation: modal-in 0.2s ease;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-box h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem; }
+.modal-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 1.25rem; }
+
+.modal-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  margin-bottom: 1.25rem;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.modal-input:focus { border-color: var(--orange); }
+
+.modal-actions { display: flex; gap: 0.75rem; }
+
+.btn-primary {
+  flex: 1;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  padding: 0.8rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover { background: var(--orange-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-cancel {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.8rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal-cancel:hover { color: var(--text); }
+
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   header { padding: 1rem; }
@@ -409,4 +660,5 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .metric-btns { gap: 0.3rem; }
   .metric-btn { padding: 0.3rem 0.65rem; font-size: 0.78rem; }
   .leaderboard-header { flex-direction: column; }
+  .league-detail-header { flex-direction: column; }
 }

@@ -6,13 +6,15 @@ const SPORT_ICONS = {
   VirtualRide: '🚴', VirtualRun: '🏃', TrailRun: '🥾',
   default: '⚡',
 };
-
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 let currentAthleteId = null;
 let currentMetric = 'distance';
+let currentLeagueMetric = 'distance';
+let currentLeagueId = null;
 
-function sportIcon(type) { return SPORT_ICONS[type] || SPORT_ICONS.default; }
+// ── Formatters ────────────────────────────────────────────────────────────────
+const sportIcon = t => SPORT_ICONS[t] || SPORT_ICONS.default;
 
 function fmtDistance(m) {
   if (m >= 1000) return (m / 1000).toFixed(1) + ' km';
@@ -20,16 +22,12 @@ function fmtDistance(m) {
 }
 
 function fmtTime(s) {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}h${m.toString().padStart(2, '0')}`;
-  return `${m}min`;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
 }
 
 function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('fr-FR', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  });
+  return new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function metricValue(totals, metric) {
@@ -46,18 +44,25 @@ function metricRaw(totals, metric) {
   return totals.distance;
 }
 
+function metricLabel(metric) {
+  return { distance: 'distance', time: 'temps', activities: 'activités', elevation: 'dénivelé' }[metric];
+}
+
+function weekRangeLabel(week_start) {
+  const s = new Date(week_start), e = new Date();
+  return `Semaine du ${s.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${e.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   const params = new URLSearchParams(location.search);
-  if (params.get('error')) { alert('Connexion refusée ou erreur Strava.'); }
+  if (params.get('error')) alert('Connexion refusée ou erreur Strava.');
   history.replaceState({}, '', '/');
 
   const status = await fetch('/api/status').then(r => r.json());
-
   if (status.connected) {
     currentAthleteId = String(status.athlete.id);
-    document.getElementById('athlete-badge').textContent =
-      `${status.athlete.firstname} ${status.athlete.lastname}`;
+    document.getElementById('athlete-badge').textContent = `${status.athlete.firstname} ${status.athlete.lastname}`;
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
     loadMyStats();
@@ -73,24 +78,34 @@ document.querySelectorAll('.tab').forEach(btn => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     btn.classList.add('active');
-    const target = btn.dataset.tab;
-    document.getElementById(target).classList.remove('hidden');
-    if (target === 'leaderboard') loadLeaderboard();
+    const tab = btn.dataset.tab;
+    document.getElementById(tab).classList.remove('hidden');
+    if (tab === 'leaderboard') loadLeaderboard();
+    if (tab === 'leagues') loadLeagues();
   });
 });
 
-// ── Metric selector ───────────────────────────────────────────────────────────
-document.querySelectorAll('.metric-btn').forEach(btn => {
+// ── Global metric selectors ───────────────────────────────────────────────────
+document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentMetric = btn.dataset.metric;
     loadLeaderboard();
   });
 });
 
+document.querySelectorAll('#league-metric-btns .metric-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLeagueMetric = btn.dataset.metric;
+    if (currentLeagueId) loadLeagueDetail(currentLeagueId);
+  });
+});
+
 // ── Logout ────────────────────────────────────────────────────────────────────
-document.getElementById('logout-btn')?.addEventListener('click', async () => {
+document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   location.reload();
 });
@@ -102,31 +117,19 @@ async function loadMyStats() {
     const data = await fetch('/api/stats/week').then(r => r.json());
     if (data.error) throw new Error(data.error);
     renderMyStats(data);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    document.getElementById('stats-loading').classList.add('hidden');
-  }
+  } catch (err) { console.error(err); }
+  finally { document.getElementById('stats-loading').classList.add('hidden'); }
 }
 
 function renderMyStats({ totals, by_sport, activities, week_start }) {
-  const weekStart = new Date(week_start);
-  const today = new Date();
-  document.getElementById('week-label').textContent =
-    `Semaine du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ` +
-    `au ${today.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
-
+  document.getElementById('week-label').textContent = weekRangeLabel(week_start);
   document.getElementById('total-count').textContent = totals.count;
   document.getElementById('total-distance').textContent = totals.distance > 0 ? fmtDistance(totals.distance) : '–';
   document.getElementById('total-time').textContent = totals.moving_time > 0 ? fmtTime(totals.moving_time) : '–';
   document.getElementById('total-elevation').textContent = totals.elevation > 0 ? Math.round(totals.elevation) + ' m' : '–';
 
-  if (totals.count === 0) {
-    document.getElementById('empty-state').classList.remove('hidden');
-    return;
-  }
+  if (totals.count === 0) { document.getElementById('empty-state').classList.remove('hidden'); return; }
 
-  // By sport
   const sportGrid = document.getElementById('sport-grid');
   sportGrid.innerHTML = '';
   for (const [type, s] of Object.entries(by_sport)) {
@@ -139,13 +142,11 @@ function renderMyStats({ totals, by_sport, activities, week_start }) {
         ${s.distance > 0 ? `<span class="sport-pill">${fmtDistance(s.distance)}</span>` : ''}
         <span class="sport-pill">${fmtTime(s.moving_time)}</span>
         ${s.elevation > 0 ? `<span class="sport-pill">+${Math.round(s.elevation)} m</span>` : ''}
-      </div>
-    `;
+      </div>`;
     sportGrid.appendChild(card);
   }
   document.getElementById('sport-section').classList.remove('hidden');
 
-  // Activities
   const list = document.getElementById('activity-list');
   list.innerHTML = '';
   for (const act of activities) {
@@ -159,93 +160,54 @@ function renderMyStats({ totals, by_sport, activities, week_start }) {
         <div class="activity-date">${fmtDate(act.start_date_local)}</div>
       </div>
       <div class="activity-stats">
-        ${act.distance > 0 ? `
-          <div class="activity-stat-item">
-            <div class="activity-stat-value">${fmtDistance(act.distance)}</div>
-            <div class="activity-stat-label">Distance</div>
-          </div>` : ''}
-        <div class="activity-stat-item">
-          <div class="activity-stat-value">${fmtTime(act.moving_time)}</div>
-          <div class="activity-stat-label">Durée</div>
-        </div>
-        ${act.total_elevation_gain > 0 ? `
-          <div class="activity-stat-item">
-            <div class="activity-stat-value">+${Math.round(act.total_elevation_gain)} m</div>
-            <div class="activity-stat-label">Dénivelé</div>
-          </div>` : ''}
-      </div>
-    `;
+        ${act.distance > 0 ? `<div class="activity-stat-item"><div class="activity-stat-value">${fmtDistance(act.distance)}</div><div class="activity-stat-label">Distance</div></div>` : ''}
+        <div class="activity-stat-item"><div class="activity-stat-value">${fmtTime(act.moving_time)}</div><div class="activity-stat-label">Durée</div></div>
+        ${act.total_elevation_gain > 0 ? `<div class="activity-stat-item"><div class="activity-stat-value">+${Math.round(act.total_elevation_gain)} m</div><div class="activity-stat-label">Dénivelé</div></div>` : ''}
+      </div>`;
     list.appendChild(item);
   }
   document.getElementById('activities-section').classList.remove('hidden');
 }
 
-// ── Leaderboard ───────────────────────────────────────────────────────────────
+// ── Global leaderboard ────────────────────────────────────────────────────────
 async function loadLeaderboard() {
-  const lbLoading = document.getElementById('lb-loading');
-  const lbList = document.getElementById('lb-list');
-  const lbEmpty = document.getElementById('lb-empty');
-
-  lbLoading.classList.remove('hidden');
-  lbList.innerHTML = '';
-  lbEmpty.classList.add('hidden');
-
+  const loading = document.getElementById('lb-loading');
+  document.getElementById('lb-list').innerHTML = '';
+  document.getElementById('lb-empty').classList.add('hidden');
+  loading.classList.remove('hidden');
   try {
     const data = await fetch(`/api/leaderboard?metric=${currentMetric}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
-    renderLeaderboard(data);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    lbLoading.classList.add('hidden');
-  }
+    document.getElementById('lb-week-label').textContent = weekRangeLabel(data.week_start);
+    renderLeaderboard(data.leaderboard, currentMetric, 'lb-list', 'lb-empty');
+  } catch (err) { console.error(err); }
+  finally { loading.classList.add('hidden'); }
 }
 
-function renderLeaderboard({ leaderboard, metric, week_start }) {
-  const weekStart = new Date(week_start);
-  const today = new Date();
-  document.getElementById('lb-week-label').textContent =
-    `Semaine du ${weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ` +
-    `au ${today.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+function renderLeaderboard(leaderboard, metric, listId, emptyId) {
+  const list = document.getElementById(listId);
+  const empty = document.getElementById(emptyId);
+  list.innerHTML = '';
 
-  const lbList = document.getElementById('lb-list');
-  const lbEmpty = document.getElementById('lb-empty');
-
-  if (leaderboard.length === 0) {
-    lbEmpty.classList.remove('hidden');
-    return;
-  }
+  if (leaderboard.length === 0) { empty.classList.remove('hidden'); return; }
 
   const maxVal = Math.max(...leaderboard.map(e => metricRaw(e.totals, metric)), 1);
 
   leaderboard.forEach((entry, i) => {
-    const rank = i + 1;
     const isMe = entry.athlete.id === currentAthleteId;
     const sports = Object.keys(entry.by_sport);
-    const val = metricRaw(entry.totals, metric);
-    const barPct = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
+    const barPct = maxVal > 0 ? Math.round((metricRaw(entry.totals, metric) / maxVal) * 100) : 0;
 
     const item = document.createElement('div');
-    item.className = `lb-item rank-${rank}`;
-
+    item.className = `lb-item rank-${i + 1}`;
     item.innerHTML = `
-      <div class="lb-rank">${MEDALS[i] || rank}</div>
-      <div class="lb-avatar">
-        ${entry.athlete.profile_medium
-          ? `<img src="${entry.athlete.profile_medium}" alt="" />`
-          : '👤'}
-      </div>
+      <div class="lb-rank">${MEDALS[i] || i + 1}</div>
+      <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${entry.athlete.profile_medium}" alt="" />` : '👤'}</div>
       <div class="lb-info" style="flex:1">
-        <div class="lb-name ${isMe ? 'is-me' : ''}">
-          ${entry.athlete.firstname} ${entry.athlete.lastname}
-        </div>
+        <div class="lb-name ${isMe ? 'is-me' : ''}">${entry.athlete.firstname} ${entry.athlete.lastname}</div>
         ${entry.athlete.city ? `<div class="lb-city">📍 ${entry.athlete.city}</div>` : ''}
-        <div class="lb-sports">
-          ${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${s}</span>`).join('')}
-        </div>
-        <div class="lb-bar-track">
-          <div class="lb-bar-fill" style="width: ${barPct}%"></div>
-        </div>
+        <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${s}</span>`).join('')}</div>
+        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${barPct}%"></div></div>
       </div>
       <div class="lb-secondary">
         <span class="lb-sec-item">${entry.totals.count} activité${entry.totals.count > 1 ? 's' : ''}</span>
@@ -254,15 +216,174 @@ function renderLeaderboard({ leaderboard, metric, week_start }) {
       </div>
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
-        <div class="lb-metric-label">${
-          metric === 'distance' ? 'distance' :
-          metric === 'time' ? 'temps' :
-          metric === 'activities' ? 'activités' : 'dénivelé'
-        }</div>
-      </div>
-    `;
-    lbList.appendChild(item);
+        <div class="lb-metric-label">${metricLabel(metric)}</div>
+      </div>`;
+    list.appendChild(item);
   });
 }
+
+// ── Leagues list ──────────────────────────────────────────────────────────────
+async function loadLeagues() {
+  showLeaguesList();
+  document.getElementById('leagues-loading').classList.remove('hidden');
+  document.getElementById('leagues-grid').innerHTML = '';
+  document.getElementById('leagues-empty').classList.add('hidden');
+
+  try {
+    const data = await fetch('/api/leagues/list').then(r => r.json());
+    renderLeaguesList(data.leagues);
+  } catch (err) { console.error(err); }
+  finally { document.getElementById('leagues-loading').classList.add('hidden'); }
+}
+
+function renderLeaguesList(leagues) {
+  const grid = document.getElementById('leagues-grid');
+  grid.innerHTML = '';
+
+  if (!leagues.length) { document.getElementById('leagues-empty').classList.remove('hidden'); return; }
+
+  for (const league of leagues) {
+    const card = document.createElement('div');
+    card.className = 'league-card';
+    card.innerHTML = `
+      <div class="league-card-name">🏆 ${league.name}</div>
+      <div class="league-card-meta">
+        <span class="league-pill">👥 ${league.memberCount} membre${league.memberCount > 1 ? 's' : ''}</span>
+        ${league.rank ? `<span class="league-pill rank">🏅 #${league.rank}</span>` : ''}
+      </div>
+      <div class="league-code-chip">🔑 ${league.code}</div>`;
+    card.addEventListener('click', () => openLeague(league));
+    grid.appendChild(card);
+  }
+}
+
+function openLeague(league) {
+  currentLeagueId = league.id;
+  document.getElementById('league-detail-name').textContent = league.name;
+  document.getElementById('league-detail-code').textContent = league.code;
+  document.getElementById('leagues-list-view').classList.add('hidden');
+  document.getElementById('league-detail-view').classList.remove('hidden');
+  loadLeagueDetail(league.id);
+}
+
+function showLeaguesList() {
+  document.getElementById('leagues-list-view').classList.remove('hidden');
+  document.getElementById('league-detail-view').classList.add('hidden');
+  currentLeagueId = null;
+}
+
+// ── League detail ─────────────────────────────────────────────────────────────
+async function loadLeagueDetail(id) {
+  document.getElementById('league-lb-loading').classList.remove('hidden');
+  document.getElementById('league-lb-list').innerHTML = '';
+  document.getElementById('league-lb-empty').classList.add('hidden');
+
+  try {
+    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}`).then(r => r.json());
+    if (data.error) throw new Error(data.error);
+    document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
+    renderLeaderboard(data.leaderboard, currentLeagueMetric, 'league-lb-list', 'league-lb-empty');
+  } catch (err) { console.error(err); }
+  finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
+}
+
+// Back button
+document.getElementById('back-to-leagues').addEventListener('click', () => loadLeagues());
+
+// Leave league
+document.getElementById('leave-league-btn').addEventListener('click', async () => {
+  if (!currentLeagueId) return;
+  if (!confirm('Quitter cette ligue ?')) return;
+  await fetch('/api/leagues/leave', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ leagueId: currentLeagueId }),
+  });
+  loadLeagues();
+});
+
+// Copy code
+document.getElementById('copy-code-btn').addEventListener('click', () => {
+  const code = document.getElementById('league-detail-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('copy-code-btn');
+    btn.textContent = '✅';
+    setTimeout(() => btn.textContent = '📋', 1500);
+  });
+});
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('open-create-modal').addEventListener('click', () => {
+  document.getElementById('create-name-input').value = '';
+  openModal('create-modal');
+  setTimeout(() => document.getElementById('create-name-input').focus(), 50);
+});
+
+document.getElementById('open-join-modal').addEventListener('click', () => {
+  document.getElementById('join-code-input').value = '';
+  openModal('join-modal');
+  setTimeout(() => document.getElementById('join-code-input').focus(), 50);
+});
+
+document.querySelectorAll('.modal-cancel').forEach(btn => {
+  btn.addEventListener('click', () => btn.closest('.modal').classList.add('hidden'));
+});
+
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+});
+
+// Create league
+document.getElementById('create-submit-btn').addEventListener('click', async () => {
+  const name = document.getElementById('create-name-input').value.trim();
+  if (!name) return;
+  const btn = document.getElementById('create-submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/leagues/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    closeModal('create-modal');
+    await loadLeagues();
+    openLeague({ ...data.league, memberCount: 1 });
+  } catch (err) { alert('Erreur lors de la création.'); }
+  finally { btn.disabled = false; }
+});
+
+document.getElementById('create-name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('create-submit-btn').click();
+});
+
+// Join league
+document.getElementById('join-submit-btn').addEventListener('click', async () => {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (!code) return;
+  const btn = document.getElementById('join-submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/leagues/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    closeModal('join-modal');
+    await loadLeagues();
+    openLeague(data.league);
+  } catch (err) { alert('Erreur lors de la connexion.'); }
+  finally { btn.disabled = false; }
+});
+
+document.getElementById('join-code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('join-submit-btn').click();
+});
 
 init();
