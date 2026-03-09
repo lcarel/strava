@@ -19,7 +19,9 @@ function escapeHtml(str) {
 
 let currentAthleteId = null;
 let currentMetric = 'distance';
+let currentLbWeek = 0;
 let currentLeagueMetric = 'distance';
+let currentLeagueWeek = 0;
 let currentLeagueId = null;
 let currentLeague = null;
 let allChallenges = [];
@@ -60,9 +62,38 @@ function metricLabel(metric) {
   return { distance: 'distance', time: 'temps', activities: 'activités', elevation: 'dénivelé' }[metric];
 }
 
+function getClientWeekStart(weeksBack = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - weeksBack * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 function weekRangeLabel(week_start) {
-  const s = new Date(week_start), e = new Date();
+  const s = new Date(week_start);
+  const end = new Date(s);
+  end.setDate(end.getDate() + 6);
+  const today = new Date();
+  const e = end > today ? today : end;
   return `Semaine du ${s.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${e.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+}
+
+function buildWeekSelector(containerId, activeWeek, onChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  for (let w = 0; w <= 4; w++) {
+    const btn = document.createElement('button');
+    btn.className = 'metric-btn' + (w === activeWeek ? ' active' : '');
+    if (w === 0) {
+      btn.textContent = 'Cette sem.';
+    } else {
+      const d = getClientWeekStart(w);
+      btn.textContent = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    }
+    btn.addEventListener('click', () => onChange(w));
+    container.appendChild(btn);
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -251,12 +282,17 @@ async function loadHistory() {
 
 // ── Global leaderboard ────────────────────────────────────────────────────────
 async function loadLeaderboard() {
+  buildWeekSelector('lb-week-btns', currentLbWeek, (w) => {
+    currentLbWeek = w;
+    loadLeaderboard();
+  });
+
   const loading = document.getElementById('lb-loading');
   document.getElementById('lb-list').innerHTML = '';
   document.getElementById('lb-empty').classList.add('hidden');
   loading.classList.remove('hidden');
   try {
-    const data = await fetch(`/api/leaderboard?metric=${currentMetric}`).then(r => r.json());
+    const data = await fetch(`/api/leaderboard?metric=${currentMetric}&week=${currentLbWeek}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
     document.getElementById('lb-week-label').textContent = weekRangeLabel(data.week_start);
     renderLeaderboard(data.leaderboard, currentMetric, 'lb-list', 'lb-empty');
@@ -361,22 +397,30 @@ function showLeaguesList() {
   document.getElementById('league-detail-view').classList.add('hidden');
   currentLeagueId = null;
   currentLeague = null;
+  currentLeagueWeek = 0;
 }
 
 // ── League detail ─────────────────────────────────────────────────────────────
 async function loadLeagueDetail(id) {
+  buildWeekSelector('league-week-btns', currentLeagueWeek, (w) => {
+    currentLeagueWeek = w;
+    // Hide challenge button on historical weeks
+    const isCreator = currentLeague && String(currentLeague.createdBy) === String(currentAthleteId);
+    document.getElementById('challenge-btn').classList.toggle('hidden', !isCreator || w > 0);
+    loadLeagueDetail(id);
+  });
+
   document.getElementById('league-lb-loading').classList.remove('hidden');
   document.getElementById('league-lb-list').innerHTML = '';
   document.getElementById('league-lb-empty').classList.add('hidden');
 
   try {
-    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}`).then(r => r.json());
+    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}&week=${currentLeagueWeek}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
-    // Update currentLeague with fresh data (includes createdBy)
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
-    renderChallengeBanner(data.challenge);
-    renderLeagueLeaderboard(data.leaderboard, currentLeagueMetric, data.challenge);
+    renderChallengeBanner(currentLeagueWeek === 0 ? data.challenge : null);
+    renderLeagueLeaderboard(data.leaderboard, currentLeagueMetric, currentLeagueWeek === 0 ? data.challenge : null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }

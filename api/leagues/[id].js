@@ -1,5 +1,5 @@
 import { getSession } from '../../lib/session.js';
-import { fetchWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
+import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
 import { computeProgress } from '../../lib/challenges.js';
 import redis from '../../lib/redis.js';
 
@@ -8,6 +8,7 @@ export default async function handler(req, res) {
   if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
 
   const { id, metric = 'distance' } = req.query;
+  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
 
   const league = await redis.get(`league:${id}`);
   if (!league) return res.status(404).json({ error: 'Ligue introuvable' });
@@ -27,7 +28,9 @@ export default async function handler(req, res) {
       try {
         const user = await getUser(athleteId);
         if (!user) return null;
-        const stats = await fetchWeekStats(athleteId);
+        const stats = week === 0
+          ? await fetchWeekStats(athleteId)
+          : await fetchHistoricalWeekStats(athleteId, week);
         const entry = {
           athlete: {
             id: athleteId,
@@ -39,7 +42,8 @@ export default async function handler(req, res) {
           totals: stats.totals,
           by_sport: stats.by_sport,
         };
-        if (challenge) entry.progress = computeProgress(stats, challenge);
+        // Challenges only apply to the current week
+        if (challenge && week === 0) entry.progress = computeProgress(stats, challenge);
         return entry;
       } catch { return null; }
     })
@@ -57,7 +61,7 @@ export default async function handler(req, res) {
   res.json({
     league: { ...league, memberCount },
     leaderboard,
-    challenge: challenge ?? null,
-    week_start: getWeekStart().toISOString(),
+    challenge: week === 0 ? (challenge ?? null) : null,
+    week_start: getWeekStart(week).toISOString(),
   });
 }

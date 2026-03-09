@@ -1,5 +1,5 @@
 import { getSession } from '../lib/session.js';
-import { fetchWeekStats, getUser, getWeekStart } from '../lib/strava.js';
+import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../lib/strava.js';
 import redis from '../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -10,6 +10,8 @@ export default async function handler(req, res) {
   const metric = req.query.metric || 'distance';
   if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
 
+  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+
   try {
     const athleteIds = await redis.smembers('athletes');
 
@@ -18,7 +20,9 @@ export default async function handler(req, res) {
         try {
           const user = await getUser(athleteId);
           if (!user) return null;
-          const stats = await fetchWeekStats(athleteId);
+          const stats = week === 0
+            ? await fetchWeekStats(athleteId)
+            : await fetchHistoricalWeekStats(athleteId, week);
           return {
             athlete: {
               id: athleteId,
@@ -45,7 +49,7 @@ export default async function handler(req, res) {
         return b.totals.distance - a.totals.distance;
       });
 
-    res.json({ leaderboard, metric, week_start: getWeekStart().toISOString() });
+    res.json({ leaderboard, metric, week_start: getWeekStart(week).toISOString() });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
