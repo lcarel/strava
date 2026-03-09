@@ -230,14 +230,11 @@ async function loadHistory() {
     const weeks = data.weeks.filter(w => w.totals.count > 0);
     if (!weeks.length) { empty.classList.remove('hidden'); return; }
 
-    const maxDist = Math.max(...weeks.map(w => w.totals.distance), 1);
-
     for (const week of weeks) {
       const start  = new Date(week.week_start);
       const end    = new Date(week.week_end);
       const label  = `Semaine du ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
       const sports = Object.entries(week.by_sport);
-      const barPct = Math.round((week.totals.distance / maxDist) * 100);
 
       const card = document.createElement('div');
       card.className = 'history-card';
@@ -260,9 +257,6 @@ async function loadHistory() {
             <div class="history-stat-value">${week.totals.elevation > 0 ? Math.round(week.totals.elevation) + ' m' : '–'}</div>
             <div class="history-stat-label">Dénivelé</div>
           </div>
-        </div>
-        <div class="history-bar-track">
-          <div class="history-bar-fill" style="width:${barPct}%"></div>
         </div>
         <div class="history-sports">
           ${sports.map(([type, s]) => `
