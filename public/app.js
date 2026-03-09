@@ -30,6 +30,7 @@ function escapeHtml(str) {
 }
 
 let currentAthleteId = null;
+let currentIsAdmin = false;
 let currentMetric = 'distance';
 let currentLbWeek = 0;
 let currentLeagueMetric = 'distance';
@@ -117,6 +118,7 @@ async function init() {
   const status = await fetch('/api/status').then(r => r.json());
   if (status.connected) {
     currentAthleteId = String(status.athlete.id);
+    currentIsAdmin = !!status.isAdmin;
     document.getElementById('athlete-badge').textContent = `${status.athlete.firstname} ${status.athlete.lastname}`;
     if (status.isAdmin) document.getElementById('admin-link').classList.remove('hidden');
     document.getElementById('app').classList.remove('hidden');
@@ -383,13 +385,10 @@ function openLeague(league) {
   document.getElementById('leagues-list-view').classList.add('hidden');
   document.getElementById('league-detail-view').classList.remove('hidden');
 
-  // Show challenge button only to league creator
-  const challengeBtn = document.getElementById('challenge-btn');
-  if (String(league.createdBy) === String(currentAthleteId)) {
-    challengeBtn.classList.remove('hidden');
-  } else {
-    challengeBtn.classList.add('hidden');
-  }
+  // Show management buttons to creator or admin
+  const isManager = String(league.createdBy) === String(currentAthleteId) || currentIsAdmin;
+  document.getElementById('challenge-btn').classList.toggle('hidden', !isManager);
+  document.getElementById('rename-league-btn').classList.toggle('hidden', !isManager);
 
   loadLeagueDetail(league.id);
 }
@@ -407,8 +406,9 @@ async function loadLeagueDetail(id) {
   buildWeekSelector('league-week-btns', currentLeagueWeek, (w) => {
     currentLeagueWeek = w;
     // Hide challenge button on historical weeks
-    const isCreator = currentLeague && String(currentLeague.createdBy) === String(currentAthleteId);
-    document.getElementById('challenge-btn').classList.toggle('hidden', !isCreator || w > 0);
+    const isManager = currentLeague && (String(currentLeague.createdBy) === String(currentAthleteId) || currentIsAdmin);
+    document.getElementById('challenge-btn').classList.toggle('hidden', !isManager || w > 0);
+    document.getElementById('rename-league-btn').classList.toggle('hidden', !isManager);
     loadLeagueDetail(id);
   });
 
@@ -453,9 +453,13 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
 
   if (!leaderboard.length) { empty.classList.remove('hidden'); return; }
 
+  const isManager = currentLeague && (String(currentLeague.createdBy) === String(currentAthleteId) || currentIsAdmin);
+  const creatorId = currentLeague ? String(currentLeague.createdBy) : null;
+
   leaderboard.forEach((entry, i) => {
     const isMe = entry.athlete.id === currentAthleteId;
     const sports = Object.keys(entry.by_sport);
+    const canKick = isManager && !isMe && (currentIsAdmin || entry.athlete.id !== creatorId);
 
     const item = document.createElement('div');
     item.className = `lb-item rank-${i + 1}`;
@@ -489,7 +493,12 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
-      </div>`;
+      </div>
+      ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}`;
+
+    if (canKick) {
+      item.querySelector('.btn-kick').addEventListener('click', () => kickMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`));
+    }
     list.appendChild(item);
   });
 }
@@ -669,5 +678,59 @@ document.getElementById('join-submit-btn').addEventListener('click', async () =>
 document.getElementById('join-code-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('join-submit-btn').click();
 });
+
+// ── Rename league ─────────────────────────────────────────────────────────────
+document.getElementById('rename-league-btn').addEventListener('click', () => {
+  document.getElementById('rename-input').value = currentLeague?.name ?? '';
+  openModal('rename-modal');
+  setTimeout(() => document.getElementById('rename-input').focus(), 50);
+});
+
+document.getElementById('rename-submit-btn').addEventListener('click', async () => {
+  const name = document.getElementById('rename-input').value.trim();
+  if (!name || !currentLeagueId) return;
+  const btn = document.getElementById('rename-submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/leagues/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: currentLeagueId, name }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    currentLeague = { ...currentLeague, name: data.league.name };
+    document.getElementById('league-detail-name').textContent = data.league.name;
+    closeModal('rename-modal');
+  } catch { alert('Erreur lors du renommage.'); }
+  finally { btn.disabled = false; }
+});
+
+document.getElementById('rename-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('rename-submit-btn').click();
+});
+
+document.querySelectorAll('#rename-modal .modal-cancel').forEach(btn => {
+  btn.addEventListener('click', () => closeModal('rename-modal'));
+});
+
+document.getElementById('rename-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('rename-modal')) closeModal('rename-modal');
+});
+
+// ── Kick member ───────────────────────────────────────────────────────────────
+async function kickMember(memberId, memberName) {
+  if (!confirm(`Exclure ${memberName} de la ligue ?`)) return;
+  try {
+    const res = await fetch('/api/leagues/kick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: currentLeagueId, memberId }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    loadLeagueDetail(currentLeagueId);
+  } catch { alert('Erreur lors de l\'exclusion.'); }
+}
 
 init();

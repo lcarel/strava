@@ -126,6 +126,7 @@
               </div>
             </div>
             <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0">
+              <button id="rename-league-btn" class="btn-challenge hidden">✏️ Renommer</button>
               <button id="challenge-btn" class="btn-challenge hidden">🎯 Défi</button>
               <button id="leave-league-btn" class="btn-leave">Quitter</button>
             </div>
@@ -180,6 +181,18 @@
       <input id="join-code-input" class="modal-input" type="text" placeholder="Ex : A3F8C2D1" maxlength="8" style="text-transform:uppercase;letter-spacing:4px;font-size:1.3rem;text-align:center" />
       <div class="modal-actions">
         <button id="join-submit-btn" class="btn-primary">Rejoindre</button>
+        <button class="modal-cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename league modal -->
+  <div id="rename-modal" class="modal hidden" role="dialog">
+    <div class="modal-box">
+      <h2>Renommer la ligue</h2>
+      <input id="rename-input" class="modal-input" type="text" placeholder="Nouveau nom..." maxlength="100" />
+      <div class="modal-actions">
+        <button id="rename-submit-btn" class="btn-primary">Renommer</button>
         <button class="modal-cancel">Annuler</button>
       </div>
     </div>

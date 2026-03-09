@@ -557,6 +557,24 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
 .btn-leave:hover { background: rgba(229,62,62,0.12); border-color: #fc8181; }
 
+.btn-kick {
+  background: transparent;
+  border: 1px solid #e53e3e44;
+  color: #fc8181;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.btn-kick:hover { background: rgba(229,62,62,0.15); border-color: #fc8181; }
+
 /* ── Modals ──────────────────────────────────────────────────────────────────── */
 .modal {
   position: fixed;
