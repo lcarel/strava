@@ -1,8 +1,14 @@
+import { getSession } from '../lib/session.js';
 import { fetchWeekStats, getUser, getWeekStart } from '../lib/strava.js';
 import redis from '../lib/redis.js';
 
 export default async function handler(req, res) {
+  const session = await getSession(req, res);
+  if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
+
+  const ALLOWED_METRICS = ['distance', 'time', 'activities', 'elevation'];
   const metric = req.query.metric || 'distance';
+  if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
 
   try {
     const athleteIds = await redis.smembers('athletes');
@@ -41,6 +47,6 @@ export default async function handler(req, res) {
 
     res.json({ leaderboard, metric, week_start: getWeekStart().toISOString() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

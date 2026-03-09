@@ -8,6 +8,15 @@ const SPORT_ICONS = {
 };
 const MEDALS = ['🥇', '🥈', '🥉'];
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 let currentAthleteId = null;
 let currentMetric = 'distance';
 let currentLeagueMetric = 'distance';
@@ -63,6 +72,7 @@ async function init() {
   if (status.connected) {
     currentAthleteId = String(status.athlete.id);
     document.getElementById('athlete-badge').textContent = `${status.athlete.firstname} ${status.athlete.lastname}`;
+    if (status.isAdmin) document.getElementById('admin-link').classList.remove('hidden');
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
     loadMyStats();
@@ -136,7 +146,7 @@ function renderMyStats({ totals, by_sport, activities, week_start }) {
     const card = document.createElement('div');
     card.className = 'sport-card';
     card.innerHTML = `
-      <div class="sport-name">${sportIcon(type)} ${type}</div>
+      <div class="sport-name">${sportIcon(type)} ${escapeHtml(type)}</div>
       <div class="sport-meta">
         <span class="sport-pill">${s.count} sortie${s.count > 1 ? 's' : ''}</span>
         ${s.distance > 0 ? `<span class="sport-pill">${fmtDistance(s.distance)}</span>` : ''}
@@ -156,7 +166,7 @@ function renderMyStats({ totals, by_sport, activities, week_start }) {
     item.innerHTML = `
       <div class="activity-icon">${sportIcon(type)}</div>
       <div class="activity-info">
-        <div class="activity-name">${act.name}</div>
+        <div class="activity-name">${escapeHtml(act.name)}</div>
         <div class="activity-date">${fmtDate(act.start_date_local)}</div>
       </div>
       <div class="activity-stats">
@@ -202,11 +212,11 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
     item.className = `lb-item rank-${i + 1}`;
     item.innerHTML = `
       <div class="lb-rank">${MEDALS[i] || i + 1}</div>
-      <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${entry.athlete.profile_medium}" alt="" />` : '👤'}</div>
+      <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${escapeHtml(entry.athlete.profile_medium)}" alt="" />` : '👤'}</div>
       <div class="lb-info" style="flex:1">
-        <div class="lb-name ${isMe ? 'is-me' : ''}">${entry.athlete.firstname} ${entry.athlete.lastname}</div>
-        ${entry.athlete.city ? `<div class="lb-city">📍 ${entry.athlete.city}</div>` : ''}
-        <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${s}</span>`).join('')}</div>
+        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
+        ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
+        <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
         <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${barPct}%"></div></div>
       </div>
       <div class="lb-secondary">
@@ -246,12 +256,12 @@ function renderLeaguesList(leagues) {
     const card = document.createElement('div');
     card.className = 'league-card';
     card.innerHTML = `
-      <div class="league-card-name">🏆 ${league.name}</div>
+      <div class="league-card-name">🏆 ${escapeHtml(league.name)}</div>
       <div class="league-card-meta">
         <span class="league-pill">👥 ${league.memberCount} membre${league.memberCount > 1 ? 's' : ''}</span>
         ${league.rank ? `<span class="league-pill rank">🏅 #${league.rank}</span>` : ''}
       </div>
-      <div class="league-code-chip">🔑 ${league.code}</div>`;
+      <div class="league-code-chip">🔑 ${escapeHtml(league.code)}</div>`;
     card.addEventListener('click', () => openLeague(league));
     grid.appendChild(card);
   }

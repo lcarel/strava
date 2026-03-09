@@ -23,6 +23,10 @@ export default async function handler(req, res) {
 
     const athleteId = String(data.athlete.id);
 
+    // Refuse login for banned athletes
+    const isBanned = await redis.sismember('banned:athletes', athleteId);
+    if (isBanned) return res.redirect('/?error=access_denied');
+
     await saveUser(athleteId, {
       access_token: data.access_token,
       refresh_token: data.refresh_token,

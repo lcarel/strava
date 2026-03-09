@@ -33,6 +33,7 @@
       </div>
       <div class="header-right">
         <div class="athlete-badge" id="athlete-badge"></div>
+        <a href="/admin.html" id="admin-link" class="btn-logout hidden">Admin</a>
         <button id="logout-btn" class="btn-logout">Déconnecter</button>
       </div>
     </header>
@@ -142,7 +143,7 @@
     <div class="modal-box">
       <h2>Créer une ligue</h2>
       <p class="modal-sub">Un code unique sera généré pour inviter tes amis.</p>
-      <input id="create-name-input" class="modal-input" type="text" placeholder="Nom de la ligue..." maxlength="40" />
+      <input id="create-name-input" class="modal-input" type="text" placeholder="Nom de la ligue..." maxlength="100" />
       <div class="modal-actions">
         <button id="create-submit-btn" class="btn-primary">Créer</button>
         <button class="modal-cancel">Annuler</button>
@@ -154,7 +155,7 @@
     <div class="modal-box">
       <h2>Rejoindre une ligue</h2>
       <p class="modal-sub">Entre le code partagé par ton ami.</p>
-      <input id="join-code-input" class="modal-input" type="text" placeholder="Ex : A3F8C2" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:1.3rem;text-align:center" />
+      <input id="join-code-input" class="modal-input" type="text" placeholder="Ex : A3F8C2D1" maxlength="8" style="text-transform:uppercase;letter-spacing:4px;font-size:1.3rem;text-align:center" />
       <div class="modal-actions">
         <button id="join-submit-btn" class="btn-primary">Rejoindre</button>
         <button class="modal-cancel">Annuler</button>

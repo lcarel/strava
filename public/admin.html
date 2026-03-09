@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Strava Stats</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .admin-header-left { display: flex; align-items: center; gap: 0.75rem; }
+    .admin-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(229,62,62,0.15);
+      color: #fc8181;
+      border: 1px solid rgba(229,62,62,0.3);
+      padding: 0.2rem 0.65rem;
+      border-radius: 20px;
+    }
+    .admin-main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+    .admin-section { margin-bottom: 3rem; }
+    .admin-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table th {
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(46,46,62,0.5);
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+    .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .admin-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      object-fit: cover;
+    }
+    .user-cell { display: flex; align-items: center; gap: 0.65rem; }
+    .badge-banned {
+      font-size: 0.7rem;
+      background: rgba(229,62,62,0.15);
+      color: #fc8181;
+      border: 1px solid rgba(229,62,62,0.3);
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+      margin-left: 0.4rem;
+    }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(229,62,62,0.4);
+      color: #fc8181;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-danger:hover { background: rgba(229,62,62,0.12); border-color: #fc8181; }
+    .btn-warn {
+      background: transparent;
+      border: 1px solid rgba(245,185,66,0.4);
+      color: var(--gold);
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-warn:hover { background: rgba(245,185,66,0.1); }
+    .btn-ok {
+      background: transparent;
+      border: 1px solid rgba(104,211,145,0.4);
+      color: #68d391;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-ok:hover { background: rgba(104,211,145,0.1); }
+    .action-cell { display: flex; gap: 0.4rem; }
+    .muted { color: var(--muted); font-size: 0.82rem; }
+    #forbidden { text-align: center; padding: 6rem 2rem; }
+    #forbidden h2 { font-size: 2rem; margin-bottom: 0.75rem; }
+    #forbidden p { color: var(--muted); margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+
+  <div id="forbidden" class="hidden">
+    <h2>⛔ Accès refusé</h2>
+    <p>Vous n'avez pas les droits administrateur.</p>
+    <a href="/" class="btn-strava" style="text-decoration:none;display:inline-flex">← Retour à l'app</a>
+  </div>
+
+  <div id="admin-app" class="hidden">
+
+    <header class="admin-header">
+      <div class="admin-header-left">
+        <div class="logo-sm">⚡</div>
+        <h1 style="font-size:1.2rem;font-weight:700">Strava Stats</h1>
+        <span class="admin-badge">Admin</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <a href="/" class="btn-logout" style="text-decoration:none">← App</a>
+        <button id="logout-btn" class="btn-logout">Déconnecter</button>
+      </div>
+    </header>
+
+    <div class="admin-main">
+
+      <!-- Stats overview -->
+      <div class="admin-section">
+        <div class="admin-section-title">Vue d'ensemble</div>
+        <div class="stat-cards">
+          <div class="card"><div class="card-icon">👥</div><div class="card-value" id="stat-users">–</div><div class="card-label">Utilisateurs</div></div>
+          <div class="card"><div class="card-icon">🏃</div><div class="card-value" id="stat-active">–</div><div class="card-label">Actifs cette semaine</div></div>
+          <div class="card"><div class="card-icon">🏆</div><div class="card-value" id="stat-leagues">–</div><div class="card-label">Ligues</div></div>
+          <div class="card"><div class="card-icon">🚫</div><div class="card-value" id="stat-banned">–</div><div class="card-label">Bannis</div></div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="admin-section">
+        <div class="admin-section-title">Utilisateurs</div>
+        <div id="users-loading" class="loading"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="users-empty" class="empty-state hidden"><span>👥</span><p>Aucun utilisateur.</p></div>
+        <div id="users-table-wrap" class="hidden">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Athlète</th>
+                <th>Ville</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Leagues -->
+      <div class="admin-section">
+        <div class="admin-section-title">Ligues</div>
+        <div id="leagues-loading" class="loading"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="leagues-empty" class="empty-state hidden"><span>🏆</span><p>Aucune ligue.</p></div>
+        <div id="leagues-table-wrap" class="hidden">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Code</th>
+                <th>Membres</th>
+                <th>Créé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="leagues-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="page-loading" class="loading" style="padding:6rem 2rem;text-align:center">
+    <div class="spinner"></div><p>Chargement...</p>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
