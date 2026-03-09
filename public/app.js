@@ -307,12 +307,9 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
 
   if (leaderboard.length === 0) { empty.classList.remove('hidden'); return; }
 
-  const maxVal = Math.max(...leaderboard.map(e => metricRaw(e.totals, metric)), 1);
-
   leaderboard.forEach((entry, i) => {
     const isMe = entry.athlete.id === currentAthleteId;
     const sports = Object.keys(entry.by_sport);
-    const barPct = maxVal > 0 ? Math.round((metricRaw(entry.totals, metric) / maxVal) * 100) : 0;
 
     const item = document.createElement('div');
     item.className = `lb-item rank-${i + 1}`;
@@ -323,7 +320,6 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
         <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
         ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
         <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
-        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${barPct}%"></div></div>
       </div>
       <div class="lb-secondary">
         <span class="lb-sec-item">${entry.totals.count} activité${entry.totals.count > 1 ? 's' : ''}</span>
@@ -451,12 +447,9 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
 
   if (!leaderboard.length) { empty.classList.remove('hidden'); return; }
 
-  const maxVal = Math.max(...leaderboard.map(e => metricRaw(e.totals, metric)), 1);
-
   leaderboard.forEach((entry, i) => {
     const isMe = entry.athlete.id === currentAthleteId;
     const sports = Object.keys(entry.by_sport);
-    const barPct = maxVal > 0 ? Math.round((metricRaw(entry.totals, metric) / maxVal) * 100) : 0;
 
     const item = document.createElement('div');
     item.className = `lb-item rank-${i + 1}`;
@@ -480,7 +473,6 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
         <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
         ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
         <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
-        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${barPct}%"></div></div>
         ${challengeHtml}
       </div>
       <div class="lb-secondary">
