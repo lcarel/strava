@@ -15,6 +15,10 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Le classement par dénivelé est réservé aux membres Premium.', premiumRequired: true });
   }
 
+  if (week > 0 && !(await isPremium(session.athleteId))) {
+    return res.status(403).json({ error: 'Les semaines passées dans le classement sont réservées aux membres Premium.', premiumRequired: true });
+  }
+
   const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
 
   try {

@@ -1,5 +1,6 @@
 import { getSession } from '../../lib/session.js';
 import { fetchHistoricalWeekStats, getWeekStart } from '../../lib/strava.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -7,6 +8,10 @@ export default async function handler(req, res) {
 
   const session = await getSession(req, res);
   if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
+
+  if (!(await isPremium(session.athleteId))) {
+    return res.status(403).json({ error: "L'historique est réservé aux membres Premium.", premiumRequired: true });
+  }
 
   // Rate limit: 10 req/min (données mises en cache 24h côté serveur)
   const rlKey = `ratelimit:history:${session.athleteId}`;

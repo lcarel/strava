@@ -98,14 +98,18 @@ function buildWeekSelector(containerId, activeWeek, onChange) {
   container.innerHTML = '';
   for (let w = 0; w <= 4; w++) {
     const btn = document.createElement('button');
-    btn.className = 'metric-btn' + (w === activeWeek ? ' active' : '');
+    const locked = w > 0 && !currentIsPremium;
+    btn.className = 'metric-btn' + (w === activeWeek ? ' active' : '') + (locked ? ' premium-locked' : '');
     if (w === 0) {
       btn.textContent = 'Cette sem.';
     } else {
       const d = getClientWeekStart(w);
       btn.textContent = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     }
-    btn.addEventListener('click', () => onChange(w));
+    btn.addEventListener('click', () => {
+      if (locked) { openPremiumModal(); return; }
+      onChange(w);
+    });
     container.appendChild(btn);
   }
 }
@@ -263,6 +267,23 @@ async function loadHistory() {
   const empty   = document.getElementById('history-empty');
   list.innerHTML = '';
   empty.classList.add('hidden');
+
+  // Gate behind premium
+  if (!currentIsPremium) {
+    loading.classList.add('hidden');
+    list.innerHTML = `
+      <div class="premium-upsell" style="margin-top:2rem">
+        <div class="premium-upsell-icon">⭐</div>
+        <div>
+          <div class="premium-upsell-title">Historique — Fonctionnalité Premium</div>
+          <div class="premium-upsell-desc">L'historique des 4 dernières semaines est réservé aux membres Premium.
+            <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
   loading.classList.remove('hidden');
 
   try {
@@ -328,8 +349,18 @@ async function loadLeaderboard() {
   document.getElementById('lb-empty').classList.add('hidden');
   loading.classList.remove('hidden');
   try {
-    const data = await fetch(`/api/leaderboard?metric=${currentMetric}&week=${currentLbWeek}`).then(r => r.json());
-    if (data.error) throw new Error(data.error);
+    const res = await fetch(`/api/leaderboard?metric=${currentMetric}&week=${currentLbWeek}`);
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.premiumRequired) {
+        renderPremiumUpsellBanner('lb-premium-upsell', true);
+        document.getElementById('lb-list').innerHTML = '';
+        document.getElementById('lb-empty').classList.add('hidden');
+        return;
+      }
+      throw new Error(data.error);
+    }
+    renderPremiumUpsellBanner('lb-premium-upsell', false);
     document.getElementById('lb-week-label').textContent = weekRangeLabel(data.week_start);
     renderLeaderboard(data.leaderboard.map(filterRunningData), currentMetric, 'lb-list', 'lb-empty');
   } catch (err) { console.error(err); }
@@ -450,10 +481,11 @@ async function loadLeagueDetail(id) {
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
     renderChallengeBanner(currentLeagueWeek === 0 ? data.challenge : null);
-    // If elevation was requested but fell back to distance due to premium gate
+    // If elevation/week was requested but fell back due to premium gate
     const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
-    renderPremiumUpsellBanner('league-premium-upsell', data.premiumRequired && currentLeagueMetric === 'elevation');
-    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, currentLeagueWeek === 0 ? data.challenge : null);
+    const effectiveWeek = (currentLeagueWeek > 0 && data.premiumRequired) ? 0 : currentLeagueWeek;
+    renderPremiumUpsellBanner('league-premium-upsell', !!data.premiumRequired);
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveWeek === 0 ? data.challenge : null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }
@@ -468,7 +500,7 @@ function renderPremiumUpsellBanner(containerId, show) {
       <div class="premium-upsell-icon">⭐</div>
       <div>
         <div class="premium-upsell-title">Fonctionnalité Premium</div>
-        <div class="premium-upsell-desc">Le classement par dénivelé est réservé aux membres Premium. Affichage par distance à la place. <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button></div>
+        <div class="premium-upsell-desc">Cette option est réservée aux membres Premium (semaines passées, classement D+). <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button></div>
       </div>
     </div>`;
 }
@@ -692,7 +724,12 @@ document.getElementById('create-submit-btn').addEventListener('click', async () 
       body: JSON.stringify({ name }),
     });
     const data = await res.json();
-    if (data.error) { alert(data.error); return; }
+    if (data.error) {
+      closeModal('create-modal');
+      if (data.premiumRequired) { openPremiumModal(); return; }
+      alert(data.error);
+      return;
+    }
     closeModal('create-modal');
     await loadLeagues();
     openLeague({ ...data.league, memberCount: 1 });

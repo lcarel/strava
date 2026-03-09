@@ -10,13 +10,19 @@ export default async function handler(req, res) {
 
   const requestedMetric = req.query.metric || 'distance';
   const { id } = req.query;
-  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+  const requestedWeek = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
 
-  // Gate elevation sort behind premium
+  // Gate elevation sort + historical weeks behind premium
+  const userIsPremium = await isPremium(session.athleteId);
   let metric = requestedMetric;
+  let week = requestedWeek;
   let premiumRequired = false;
-  if (metric === 'elevation' && !(await isPremium(session.athleteId))) {
+  if (metric === 'elevation' && !userIsPremium) {
     metric = 'distance';
+    premiumRequired = true;
+  }
+  if (week > 0 && !userIsPremium) {
+    week = 0;
     premiumRequired = true;
   }
 
