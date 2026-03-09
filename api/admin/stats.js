@@ -1,4 +1,5 @@
 import { requireAdmin } from './middleware.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -26,11 +27,16 @@ export default async function handler(req, res) {
   );
   const activeThisWeek = activeChecks.filter(Boolean).length;
 
+  // Count premium users
+  const premiumChecks = await Promise.all(athleteIds.map(id => isPremium(id)));
+  const premiumUsers = premiumChecks.filter(Boolean).length;
+
   res.json({
     totalUsers: athleteIds.length,
     bannedUsers: bannedIds.length,
     activeThisWeek,
     totalLeagues: uniqueLeagueIds.size,
+    premiumUsers,
   });
 }
 

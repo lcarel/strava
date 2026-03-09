@@ -33,6 +33,7 @@
       </div>
       <div class="header-right">
         <div class="athlete-badge" id="athlete-badge"></div>
+        <span id="premium-badge" class="premium-badge hidden">⭐ Premium</span>
         <a href="/admin.html" id="admin-link" class="btn-logout hidden">Admin</a>
         <button id="logout-btn" class="btn-logout">Déconnecter</button>
       </div>
@@ -152,6 +153,7 @@
             </div>
           </div>
 
+          <div id="league-premium-upsell" class="hidden"></div>
           <div id="league-lb-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
           <div id="league-lb-list" class="lb-list"></div>
           <div id="league-lb-empty" class="empty-state hidden"><span>🏃</span><p>Personne n'a encore bougé cette semaine !</p></div>
@@ -207,6 +209,26 @@
       <div class="modal-actions" style="margin-top:1.25rem">
         <button id="stop-challenge-btn" class="btn-danger-outline hidden">Arrêter le défi actuel</button>
         <button class="modal-cancel">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium info modal -->
+  <div id="premium-modal" class="modal hidden" role="dialog">
+    <div class="modal-box" style="max-width:420px">
+      <div class="premium-modal-hero">
+        <span class="premium-star">⭐</span>
+        <h2>Passe en Premium</h2>
+        <p>Débloque toutes les fonctionnalités avancées de Strava Stats.</p>
+      </div>
+      <ul class="premium-features-list">
+        <li>Défis avancés : marathon, 100 km/semaine, 3000 m D+, et plus</li>
+        <li>Ligues sans limite de membres (gratuit = 8 max)</li>
+        <li>Classement par dénivelé (D+) dans le classement global et les ligues</li>
+      </ul>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem">Contacte un administrateur pour activer le Premium sur ton compte.</p>
+      <div class="modal-actions">
+        <button class="modal-cancel" style="flex:1">Fermer</button>
       </div>
     </div>
   </div>

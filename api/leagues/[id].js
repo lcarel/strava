@@ -1,14 +1,24 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
 import { computeProgress } from '../../lib/challenges.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
   const session = await getSession(req, res);
   if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
 
-  const { id, metric = 'distance' } = req.query;
+  const requestedMetric = req.query.metric || 'distance';
+  const { id } = req.query;
   const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+
+  // Gate elevation sort behind premium
+  let metric = requestedMetric;
+  let premiumRequired = false;
+  if (metric === 'elevation' && !(await isPremium(session.athleteId))) {
+    metric = 'distance';
+    premiumRequired = true;
+  }
 
   const league = await redis.get(`league:${id}`);
   if (!league) return res.status(404).json({ error: 'Ligue introuvable' });
@@ -63,5 +73,6 @@ export default async function handler(req, res) {
     leaderboard,
     challenge: week === 0 ? (challenge ?? null) : null,
     week_start: getWeekStart(week).toISOString(),
+    ...(premiumRequired ? { premiumRequired: true } : {}),
   });
 }

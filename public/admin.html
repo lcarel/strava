@@ -111,6 +111,15 @@
     .btn-ok:hover { background: rgba(104,211,145,0.1); }
     .action-cell { display: flex; gap: 0.4rem; }
     .muted { color: var(--muted); font-size: 0.82rem; }
+    .badge-premium {
+      font-size: 0.7rem;
+      background: rgba(245,185,66,0.15);
+      color: var(--gold);
+      border: 1px solid rgba(245,185,66,0.35);
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+      font-weight: 700;
+    }
     #forbidden { text-align: center; padding: 6rem 2rem; }
     #forbidden h2 { font-size: 2rem; margin-bottom: 0.75rem; }
     #forbidden p { color: var(--muted); margin-bottom: 1.5rem; }
@@ -147,6 +156,7 @@
           <div class="card"><div class="card-icon">👥</div><div class="card-value" id="stat-users">–</div><div class="card-label">Utilisateurs</div></div>
           <div class="card"><div class="card-icon">🏃</div><div class="card-value" id="stat-active">–</div><div class="card-label">Actifs cette semaine</div></div>
           <div class="card"><div class="card-icon">🏆</div><div class="card-value" id="stat-leagues">–</div><div class="card-label">Ligues</div></div>
+          <div class="card"><div class="card-icon">⭐</div><div class="card-value" id="stat-premium">–</div><div class="card-label">Premium</div></div>
           <div class="card"><div class="card-icon">🚫</div><div class="card-value" id="stat-banned">–</div><div class="card-label">Bannis</div></div>
         </div>
       </div>
@@ -162,6 +172,7 @@
               <tr>
                 <th>Athlète</th>
                 <th>Ville</th>
+                <th>Premium</th>
                 <th>Actions</th>
               </tr>
             </thead>

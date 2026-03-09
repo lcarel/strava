@@ -41,6 +41,7 @@ async function loadStats() {
     document.getElementById('stat-users').textContent = data.totalUsers ?? '–';
     document.getElementById('stat-active').textContent = data.activeThisWeek ?? '–';
     document.getElementById('stat-leagues').textContent = data.totalLeagues ?? '–';
+    document.getElementById('stat-premium').textContent = data.premiumUsers ?? '–';
     document.getElementById('stat-banned').textContent = data.bannedUsers ?? '–';
   } catch (err) {
     console.error('Stats error:', err);
@@ -68,6 +69,7 @@ async function loadUsers() {
       tr.dataset.id = user.id;
 
       const bannedBadge = user.isBanned ? `<span class="badge-banned">banni</span>` : '';
+      const premiumBadge = user.isPremium ? `<span class="badge-premium">⭐ Premium</span>` : '';
       const avatarHtml = user.profile_medium
         ? `<img class="admin-avatar" src="${escapeHtml(user.profile_medium)}" alt="" />`
         : `<div class="admin-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1rem">👤</div>`;
@@ -80,8 +82,12 @@ async function loadUsers() {
           </div>
         </td>
         <td class="muted">${escapeHtml(user.city ?? '–')}</td>
+        <td>${premiumBadge}</td>
         <td>
           <div class="action-cell">
+            <button class="btn-ok btn-premium-toggle" title="${user.isPremium ? 'Révoquer Premium' : 'Activer Premium'}">
+              ${user.isPremium ? '⭐ Révoquer' : '⭐ Activer'}
+            </button>
             <button class="btn-warn btn-ban-toggle" title="${user.isBanned ? 'Débannir' : 'Bannir'}">
               ${user.isBanned ? 'Débannir' : 'Bannir'}
             </button>
@@ -91,6 +97,7 @@ async function loadUsers() {
           </div>
         </td>`;
 
+      tr.querySelector('.btn-premium-toggle').addEventListener('click', () => togglePremium(user.id, !user.isPremium, `${user.firstname} ${user.lastname}`));
       tr.querySelector('.btn-ban-toggle').addEventListener('click', () => toggleBan(user.id, !user.isBanned, tr));
       tr.querySelector('.btn-delete-user').addEventListener('click', () => deleteUser(user.id, `${user.firstname} ${user.lastname}`));
 
@@ -102,6 +109,25 @@ async function loadUsers() {
     console.error('Users error:', err);
   } finally {
     document.getElementById('users-loading').classList.add('hidden');
+  }
+}
+
+async function togglePremium(athleteId, activate, name) {
+  const action = activate ? 'activer' : 'révoquer';
+  if (!confirm(`${activate ? 'Activer' : 'Révoquer'} le Premium pour ${name} ?`)) return;
+
+  const res = await fetch('/api/admin/premium', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteId, active: activate }),
+  });
+
+  if (res.ok) {
+    await loadUsers();
+    await loadStats();
+  } else {
+    const data = await res.json();
+    alert(data.error || 'Erreur');
   }
 }
 

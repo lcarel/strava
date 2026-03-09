@@ -31,6 +31,7 @@ function escapeHtml(str) {
 
 let currentAthleteId = null;
 let currentIsAdmin = false;
+let currentIsPremium = false;
 let currentMetric = 'distance';
 let currentLbWeek = 0;
 let currentLeagueMetric = 'distance';
@@ -119,8 +120,11 @@ async function init() {
   if (status.connected) {
     currentAthleteId = String(status.athlete.id);
     currentIsAdmin = !!status.isAdmin;
+    currentIsPremium = !!status.isPremium;
     document.getElementById('athlete-badge').textContent = `${status.athlete.firstname} ${status.athlete.lastname}`;
     if (status.isAdmin) document.getElementById('admin-link').classList.remove('hidden');
+    if (currentIsPremium) document.getElementById('premium-badge').classList.remove('hidden');
+    updateElevationBtnLock();
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
     loadMyStats();
@@ -144,9 +148,29 @@ document.querySelectorAll('.tab').forEach(btn => {
   });
 });
 
+// ── Premium helpers ────────────────────────────────────────────────────────────
+function openPremiumModal() { openModal('premium-modal'); }
+
+function updateElevationBtnLock() {
+  document.querySelectorAll('.metric-btn[data-metric="elevation"]').forEach(btn => {
+    btn.classList.toggle('premium-locked', !currentIsPremium);
+  });
+}
+
+document.getElementById('premium-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('premium-modal')) closeModal('premium-modal');
+});
+document.querySelectorAll('#premium-modal .modal-cancel').forEach(btn => {
+  btn.addEventListener('click', () => closeModal('premium-modal'));
+});
+
 // ── Global metric selectors ───────────────────────────────────────────────────
 document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.dataset.metric === 'elevation' && !currentIsPremium) {
+      openPremiumModal();
+      return;
+    }
     document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentMetric = btn.dataset.metric;
@@ -156,6 +180,10 @@ document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(btn => {
 
 document.querySelectorAll('#league-metric-btns .metric-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.dataset.metric === 'elevation' && !currentIsPremium) {
+      openPremiumModal();
+      return;
+    }
     document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentLeagueMetric = btn.dataset.metric;
@@ -422,9 +450,27 @@ async function loadLeagueDetail(id) {
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
     renderChallengeBanner(currentLeagueWeek === 0 ? data.challenge : null);
-    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), currentLeagueMetric, currentLeagueWeek === 0 ? data.challenge : null);
+    // If elevation was requested but fell back to distance due to premium gate
+    const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
+    renderPremiumUpsellBanner('league-premium-upsell', data.premiumRequired && currentLeagueMetric === 'elevation');
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, currentLeagueWeek === 0 ? data.challenge : null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
+}
+
+function renderPremiumUpsellBanner(containerId, show) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!show) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <div class="premium-upsell">
+      <div class="premium-upsell-icon">⭐</div>
+      <div>
+        <div class="premium-upsell-title">Fonctionnalité Premium</div>
+        <div class="premium-upsell-desc">Le classement par dénivelé est réservé aux membres Premium. Affichage par distance à la place. <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button></div>
+      </div>
+    </div>`;
 }
 
 function renderChallengeBanner(challenge) {
@@ -525,6 +571,8 @@ document.getElementById('challenge-btn').addEventListener('click', async () => {
     const data = await fetch('/api/leagues/challenges').then(r => r.json());
     allChallenges = data.challenges || [];
     allChallengeCategories = data.categories || [];
+    // Update isPremium from response (fresh check)
+    if (typeof data.isPremium === 'boolean') currentIsPremium = data.isPremium;
   }
   renderChallengeModal();
   openModal('challenge-modal');
@@ -563,13 +611,15 @@ function renderChallengeModal() {
     for (const id of cat.ids) {
       const c = allChallenges.find(ch => ch.id === id);
       if (!c) continue;
+      const isLocked = !!c.premium && !currentIsPremium;
       const card = document.createElement('button');
-      card.className = 'challenge-card';
+      card.className = 'challenge-card' + (isLocked ? ' premium-locked' : '');
       card.innerHTML = `
         <div class="challenge-card-emoji">${escapeHtml(c.emoji)}</div>
         <div class="challenge-card-label">${escapeHtml(c.label)}</div>
         <div class="challenge-card-desc">${escapeHtml(c.desc)}</div>`;
       card.addEventListener('click', async () => {
+        if (isLocked) { openPremiumModal(); return; }
         await setChallenge(c.id);
         closeModal('challenge-modal');
       });
@@ -732,5 +782,8 @@ async function kickMember(memberId, memberName) {
     loadLeagueDetail(currentLeagueId);
   } catch { alert('Erreur lors de l\'exclusion.'); }
 }
+
+// Expose for inline onclick usage
+window.openPremiumModal = openPremiumModal;
 
 init();

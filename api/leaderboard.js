@@ -1,5 +1,6 @@
 import { getSession } from '../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../lib/strava.js';
+import { isPremium } from '../lib/premium.js';
 import redis from '../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -9,6 +10,10 @@ export default async function handler(req, res) {
   const ALLOWED_METRICS = ['distance', 'time', 'activities', 'elevation'];
   const metric = req.query.metric || 'distance';
   if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
+
+  if (metric === 'elevation' && !(await isPremium(session.athleteId))) {
+    return res.status(403).json({ error: 'Le classement par dénivelé est réservé aux membres Premium.', premiumRequired: true });
+  }
 
   const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
 

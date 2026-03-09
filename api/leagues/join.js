@@ -1,5 +1,8 @@
 import { getSession } from '../../lib/session.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
+
+const FREE_LEAGUE_MAX_MEMBERS = 8;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -32,6 +35,18 @@ export default async function handler(req, res) {
   // Already a member?
   const isMember = await redis.sismember(`league:${leagueId}:members`, session.athleteId);
   if (isMember) return res.status(409).json({ error: 'Déjà membre de cette ligue' });
+
+  // Enforce member limit for free leagues
+  const currentCount = await redis.scard(`league:${leagueId}:members`);
+  if (currentCount >= FREE_LEAGUE_MAX_MEMBERS) {
+    const creatorHasPremium = await isPremium(league.createdBy);
+    if (!creatorHasPremium) {
+      return res.status(403).json({
+        error: `Cette ligue est complète (${FREE_LEAGUE_MAX_MEMBERS} membres max en version gratuite). Le créateur doit passer en Premium pour l'agrandir.`,
+        premiumRequired: true,
+      });
+    }
+  }
 
   await redis.sadd(`league:${leagueId}:members`, session.athleteId);
   await redis.sadd(`athlete:${session.athleteId}:leagues`, leagueId);

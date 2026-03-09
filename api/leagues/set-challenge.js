@@ -1,5 +1,6 @@
 import { getSession } from '../../lib/session.js';
 import { CHALLENGES } from '../../lib/challenges.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -26,6 +27,10 @@ export default async function handler(req, res) {
 
   const def = CHALLENGES.find(c => c.id === challengeId);
   if (!def) return res.status(400).json({ error: 'Défi invalide' });
+
+  if (def.premium && !(await isPremium(session.athleteId))) {
+    return res.status(403).json({ error: 'Ce défi est réservé aux membres Premium.', premiumRequired: true });
+  }
 
   const challenge = { ...def, startedAt: new Date().toISOString() };
   await redis.set(`league:${leagueId}:challenge`, challenge);

@@ -1,5 +1,6 @@
 import { requireAdmin } from './middleware.js';
 import { getUser } from '../../lib/strava.js';
+import { isPremium } from '../../lib/premium.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -21,6 +22,7 @@ export default async function handler(req, res) {
           city: user.athlete?.city ?? null,
           profile_medium: user.athlete?.profile_medium ?? null,
           isBanned: bannedIds.has(id),
+          isPremium: await isPremium(id),
         };
       })
     );
@@ -51,6 +53,7 @@ export default async function handler(req, res) {
     // Delete user data
     await redis.del(`athlete:${athleteId}:leagues`);
     await redis.del(`user:${athleteId}`);
+    await redis.del(`premium:${athleteId}`);
     await redis.srem('athletes', athleteId);
     await redis.srem('banned:athletes', athleteId);
 
