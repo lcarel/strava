@@ -267,23 +267,6 @@ async function loadHistory() {
   const empty   = document.getElementById('history-empty');
   list.innerHTML = '';
   empty.classList.add('hidden');
-
-  // Gate behind premium
-  if (!currentIsPremium) {
-    loading.classList.add('hidden');
-    list.innerHTML = `
-      <div class="premium-upsell" style="margin-top:2rem">
-        <div class="premium-upsell-icon">⭐</div>
-        <div>
-          <div class="premium-upsell-title">Historique — Fonctionnalité Premium</div>
-          <div class="premium-upsell-desc">L'historique des 4 dernières semaines est réservé aux membres Premium.
-            <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button>
-          </div>
-        </div>
-      </div>`;
-    return;
-  }
-
   loading.classList.remove('hidden');
 
   try {
@@ -292,6 +275,7 @@ async function loadHistory() {
 
     const weeks = data.weeks.map(filterRunningData).filter(w => w.totals.count > 0);
     if (!weeks.length) { empty.classList.remove('hidden'); return; }
+    const showUpsell = !data.isPremium;
 
     for (const week of weeks) {
       const start  = new Date(week.week_start);
@@ -329,6 +313,21 @@ async function loadHistory() {
             </span>`).join('')}
         </div>`;
       list.appendChild(card);
+    }
+
+    if (showUpsell) {
+      const upsell = document.createElement('div');
+      upsell.innerHTML = `
+        <div class="premium-upsell" style="margin-top:0.5rem">
+          <div class="premium-upsell-icon">⭐</div>
+          <div>
+            <div class="premium-upsell-title">Historique complet — Premium</div>
+            <div class="premium-upsell-desc">Accède aux 4 dernières semaines avec le Premium.
+              <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button>
+            </div>
+          </div>
+        </div>`;
+      list.appendChild(upsell);
     }
   } catch (err) {
     console.error(err);

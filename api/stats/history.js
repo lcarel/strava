@@ -9,9 +9,9 @@ export default async function handler(req, res) {
   const session = await getSession(req, res);
   if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
 
-  if (!(await isPremium(session.athleteId))) {
-    return res.status(403).json({ error: "L'historique est réservé aux membres Premium.", premiumRequired: true });
-  }
+  const premium = await isPremium(session.athleteId);
+  // Free: last week only. Premium: last 4 weeks.
+  const weeksToFetch = premium ? [1, 2, 3, 4] : [1];
 
   // Rate limit: 10 req/min (données mises en cache 24h côté serveur)
   const rlKey = `ratelimit:history:${session.athleteId}`;
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
   try {
     const weeks = await Promise.all(
-      [1, 2, 3, 4].map(async (weeksBack) => {
+      weeksToFetch.map(async (weeksBack) => {
         const weekStart = getWeekStart(weeksBack);
         const weekEnd   = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       })
     );
 
-    res.json({ weeks });
+    res.json({ weeks, isPremium: premium });
   } catch (err) {
     console.error('History error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
