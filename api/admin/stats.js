@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const weekStart = getWeekStartDate().toISOString().slice(0, 10);
   const activeChecks = await Promise.all(
     athleteIds.map(async id => {
-      const cached = await redis.get(`stats:${id}:${weekStart}`);
+      const cached = await redis.get(`v2:stats:${id}:${weekStart}`);
       return cached !== null;
     })
   );

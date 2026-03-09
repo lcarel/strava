@@ -1,11 +1,23 @@
+const RUNNING_TYPES = new Set(['Run', 'TrailRun']);
+
 const SPORT_ICONS = {
-  Run: '🏃', Ride: '🚴', Swim: '🏊', Walk: '🚶', Hike: '🥾',
-  WeightTraining: '🏋️', Yoga: '🧘', Skiing: '⛷️', Snowboard: '🏂',
-  Rowing: '🚣', Kayaking: '🛶', Soccer: '⚽', Tennis: '🎾',
-  Golf: '⛳', Crossfit: '💪', Elliptical: '🔄', StairStepper: '🪜',
-  VirtualRide: '🚴', VirtualRun: '🏃', TrailRun: '🥾',
-  default: '⚡',
+  Run: '🏃', TrailRun: '🥾',
+  default: '🏃',
 };
+
+function filterRunningData(data) {
+  if (!data) return data;
+  const result = { ...data };
+  if (result.by_sport) {
+    result.by_sport = Object.fromEntries(
+      Object.entries(result.by_sport).filter(([type]) => RUNNING_TYPES.has(type))
+    );
+  }
+  if (result.activities) {
+    result.activities = result.activities.filter(a => RUNNING_TYPES.has(a.sport_type || a.type));
+  }
+  return result;
+}
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function escapeHtml(str) {
@@ -161,7 +173,7 @@ async function loadMyStats() {
   try {
     const data = await fetch('/api/stats/week').then(r => r.json());
     if (data.error) throw new Error(data.error);
-    renderMyStats(data);
+    renderMyStats(filterRunningData(data));
   } catch (err) { console.error(err); }
   finally { document.getElementById('stats-loading').classList.add('hidden'); }
 }
@@ -227,7 +239,7 @@ async function loadHistory() {
     const data = await fetch('/api/stats/history').then(r => r.json());
     if (data.error) throw new Error(data.error);
 
-    const weeks = data.weeks.filter(w => w.totals.count > 0);
+    const weeks = data.weeks.map(filterRunningData).filter(w => w.totals.count > 0);
     if (!weeks.length) { empty.classList.remove('hidden'); return; }
 
     for (const week of weeks) {
@@ -289,7 +301,7 @@ async function loadLeaderboard() {
     const data = await fetch(`/api/leaderboard?metric=${currentMetric}&week=${currentLbWeek}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
     document.getElementById('lb-week-label').textContent = weekRangeLabel(data.week_start);
-    renderLeaderboard(data.leaderboard, currentMetric, 'lb-list', 'lb-empty');
+    renderLeaderboard(data.leaderboard.map(filterRunningData), currentMetric, 'lb-list', 'lb-empty');
   } catch (err) { console.error(err); }
   finally { loading.classList.add('hidden'); }
 }
@@ -410,7 +422,7 @@ async function loadLeagueDetail(id) {
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
     renderChallengeBanner(currentLeagueWeek === 0 ? data.challenge : null);
-    renderLeagueLeaderboard(data.leaderboard, currentLeagueMetric, currentLeagueWeek === 0 ? data.challenge : null);
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), currentLeagueMetric, currentLeagueWeek === 0 ? data.challenge : null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }
