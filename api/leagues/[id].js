@@ -21,7 +21,8 @@ export default async function handler(req, res) {
     metric = 'distance';
     premiumRequired = true;
   }
-  if (week > 0 && !userIsPremium) {
+  // Free: current week + last week (week 1). Weeks 2-4 require premium.
+  if (week > 1 && !userIsPremium) {
     week = 0;
     premiumRequired = true;
   }

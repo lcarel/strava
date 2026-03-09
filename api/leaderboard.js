@@ -11,15 +11,17 @@ export default async function handler(req, res) {
   const metric = req.query.metric || 'distance';
   if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
 
-  if (metric === 'elevation' && !(await isPremium(session.athleteId))) {
+  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+  const premium = await isPremium(session.athleteId);
+
+  if (metric === 'elevation' && !premium) {
     return res.status(403).json({ error: 'Le classement par dénivelé est réservé aux membres Premium.', premiumRequired: true });
   }
 
-  if (week > 0 && !(await isPremium(session.athleteId))) {
-    return res.status(403).json({ error: 'Les semaines passées dans le classement sont réservées aux membres Premium.', premiumRequired: true });
+  // Free: current week + last week (week 1). Weeks 2-4 require premium.
+  if (week > 1 && !premium) {
+    return res.status(403).json({ error: 'Les semaines 2 à 4 du classement sont réservées aux membres Premium.', premiumRequired: true });
   }
-
-  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
 
   try {
     const athleteIds = await redis.smembers('athletes');

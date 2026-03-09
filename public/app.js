@@ -98,7 +98,7 @@ function buildWeekSelector(containerId, activeWeek, onChange) {
   container.innerHTML = '';
   for (let w = 0; w <= 4; w++) {
     const btn = document.createElement('button');
-    const locked = w > 0 && !currentIsPremium;
+    const locked = w > 1 && !currentIsPremium;
     btn.className = 'metric-btn' + (w === activeWeek ? ' active' : '') + (locked ? ' premium-locked' : '');
     if (w === 0) {
       btn.textContent = 'Cette sem.';
