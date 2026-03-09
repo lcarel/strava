@@ -93,8 +93,9 @@ document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.add('active');
     const tab = btn.dataset.tab;
     document.getElementById(tab).classList.remove('hidden');
+    if (tab === 'history')     loadHistory();
     if (tab === 'leaderboard') loadLeaderboard();
-    if (tab === 'leagues') loadLeagues();
+    if (tab === 'leagues')     loadLeagues();
   });
 });
 
@@ -180,6 +181,72 @@ function renderMyStats({ totals, by_sport, activities, week_start }) {
     list.appendChild(item);
   }
   document.getElementById('activities-section').classList.remove('hidden');
+}
+
+// ── History ────────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const loading = document.getElementById('history-loading');
+  const list    = document.getElementById('history-list');
+  const empty   = document.getElementById('history-empty');
+  list.innerHTML = '';
+  empty.classList.add('hidden');
+  loading.classList.remove('hidden');
+
+  try {
+    const data = await fetch('/api/stats/history').then(r => r.json());
+    if (data.error) throw new Error(data.error);
+
+    const weeks = data.weeks.filter(w => w.totals.count > 0);
+    if (!weeks.length) { empty.classList.remove('hidden'); return; }
+
+    const maxDist = Math.max(...weeks.map(w => w.totals.distance), 1);
+
+    for (const week of weeks) {
+      const start  = new Date(week.week_start);
+      const end    = new Date(week.week_end);
+      const label  = `Semaine du ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+      const sports = Object.entries(week.by_sport);
+      const barPct = Math.round((week.totals.distance / maxDist) * 100);
+
+      const card = document.createElement('div');
+      card.className = 'history-card';
+      card.innerHTML = `
+        <div class="history-week-label">${label}</div>
+        <div class="history-stats">
+          <div class="history-stat">
+            <div class="history-stat-value">${week.totals.count}</div>
+            <div class="history-stat-label">Activités</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-value">${week.totals.distance > 0 ? fmtDistance(week.totals.distance) : '–'}</div>
+            <div class="history-stat-label">Distance</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-value">${week.totals.moving_time > 0 ? fmtTime(week.totals.moving_time) : '–'}</div>
+            <div class="history-stat-label">Temps</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-value">${week.totals.elevation > 0 ? Math.round(week.totals.elevation) + ' m' : '–'}</div>
+            <div class="history-stat-label">Dénivelé</div>
+          </div>
+        </div>
+        <div class="history-bar-track">
+          <div class="history-bar-fill" style="width:${barPct}%"></div>
+        </div>
+        <div class="history-sports">
+          ${sports.map(([type, s]) => `
+            <span class="history-sport-pill">
+              ${sportIcon(type)} ${escapeHtml(type)}
+              <span class="history-sport-detail">${s.count} sortie${s.count > 1 ? 's' : ''}${s.distance > 0 ? ' · ' + fmtDistance(s.distance) : ''}</span>
+            </span>`).join('')}
+        </div>`;
+      list.appendChild(card);
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    loading.classList.add('hidden');
+  }
 }
 
 // ── Global leaderboard ────────────────────────────────────────────────────────

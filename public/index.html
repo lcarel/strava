@@ -40,6 +40,7 @@
 
     <nav class="tabs">
       <button class="tab active" data-tab="my-stats">Mes stats</button>
+      <button class="tab" data-tab="history">Historique</button>
       <button class="tab" data-tab="leaderboard">Classement</button>
       <button class="tab" data-tab="leagues">Ligues</button>
     </nav>
@@ -59,6 +60,13 @@
         <div id="activities-section" class="hidden"><h2 class="section-title">Activités</h2><div class="activity-list" id="activity-list"></div></div>
         <div id="empty-state" class="empty-state hidden"><span>😴</span><p>Aucune activité cette semaine — c'est le moment de sortir !</p></div>
         <div id="stats-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+      </div>
+
+      <!-- ── History ───────────────────────────────────────────────────────── -->
+      <div id="history" class="tab-content hidden">
+        <div id="history-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="history-empty" class="empty-state hidden"><span>📭</span><p>Aucune activité sur les 4 dernières semaines.</p></div>
+        <div id="history-list"></div>
       </div>
 
       <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
