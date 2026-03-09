@@ -1,5 +1,6 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
+import { computeProgress } from '../../lib/challenges.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -15,7 +16,10 @@ export default async function handler(req, res) {
   const isMember = await redis.sismember(`league:${id}:members`, session.athleteId);
   if (!isMember) return res.status(403).json({ error: 'Accès refusé' });
 
-  const memberIds = await redis.smembers(`league:${id}:members`);
+  const [memberIds, challenge] = await Promise.all([
+    redis.smembers(`league:${id}:members`),
+    redis.get(`league:${id}:challenge`),
+  ]);
   const memberCount = memberIds.length;
 
   const results = await Promise.all(
@@ -24,7 +28,7 @@ export default async function handler(req, res) {
         const user = await getUser(athleteId);
         if (!user) return null;
         const stats = await fetchWeekStats(athleteId);
-        return {
+        const entry = {
           athlete: {
             id: athleteId,
             firstname: user.athlete.firstname,
@@ -35,6 +39,8 @@ export default async function handler(req, res) {
           totals: stats.totals,
           by_sport: stats.by_sport,
         };
+        if (challenge) entry.progress = computeProgress(stats, challenge);
+        return entry;
       } catch { return null; }
     })
   );
@@ -51,6 +57,7 @@ export default async function handler(req, res) {
   res.json({
     league: { ...league, memberCount },
     leaderboard,
+    challenge: challenge ?? null,
     week_start: getWeekStart().toISOString(),
   });
 }

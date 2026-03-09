@@ -21,6 +21,9 @@ let currentAthleteId = null;
 let currentMetric = 'distance';
 let currentLeagueMetric = 'distance';
 let currentLeagueId = null;
+let currentLeague = null;
+let allChallenges = [];
+let allChallengeCategories = [];
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const sportIcon = t => SPORT_ICONS[t] || SPORT_ICONS.default;
@@ -269,10 +272,20 @@ function renderLeaguesList(leagues) {
 
 function openLeague(league) {
   currentLeagueId = league.id;
+  currentLeague = league;
   document.getElementById('league-detail-name').textContent = league.name;
   document.getElementById('league-detail-code').textContent = league.code;
   document.getElementById('leagues-list-view').classList.add('hidden');
   document.getElementById('league-detail-view').classList.remove('hidden');
+
+  // Show challenge button only to league creator
+  const challengeBtn = document.getElementById('challenge-btn');
+  if (String(league.createdBy) === String(currentAthleteId)) {
+    challengeBtn.classList.remove('hidden');
+  } else {
+    challengeBtn.classList.add('hidden');
+  }
+
   loadLeagueDetail(league.id);
 }
 
@@ -280,6 +293,7 @@ function showLeaguesList() {
   document.getElementById('leagues-list-view').classList.remove('hidden');
   document.getElementById('league-detail-view').classList.add('hidden');
   currentLeagueId = null;
+  currentLeague = null;
 }
 
 // ── League detail ─────────────────────────────────────────────────────────────
@@ -291,10 +305,84 @@ async function loadLeagueDetail(id) {
   try {
     const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
+    // Update currentLeague with fresh data (includes createdBy)
+    if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
-    renderLeaderboard(data.leaderboard, currentLeagueMetric, 'league-lb-list', 'league-lb-empty');
+    renderChallengeBanner(data.challenge);
+    renderLeagueLeaderboard(data.leaderboard, currentLeagueMetric, data.challenge);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
+}
+
+function renderChallengeBanner(challenge) {
+  const banner = document.getElementById('challenge-banner');
+  if (!challenge) {
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
+  }
+  banner.classList.remove('hidden');
+  banner.innerHTML = `
+    <div class="challenge-banner">
+      <div class="challenge-banner-icon">${escapeHtml(challenge.emoji)}</div>
+      <div class="challenge-banner-info">
+        <div class="challenge-banner-label">Défi en cours</div>
+        <div class="challenge-banner-name">${escapeHtml(challenge.label)}</div>
+        <div class="challenge-banner-desc">${escapeHtml(challenge.desc)}</div>
+      </div>
+    </div>`;
+}
+
+function renderLeagueLeaderboard(leaderboard, metric, challenge) {
+  const list = document.getElementById('league-lb-list');
+  const empty = document.getElementById('league-lb-empty');
+  list.innerHTML = '';
+
+  if (!leaderboard.length) { empty.classList.remove('hidden'); return; }
+
+  const maxVal = Math.max(...leaderboard.map(e => metricRaw(e.totals, metric)), 1);
+
+  leaderboard.forEach((entry, i) => {
+    const isMe = entry.athlete.id === currentAthleteId;
+    const sports = Object.keys(entry.by_sport);
+    const barPct = maxVal > 0 ? Math.round((metricRaw(entry.totals, metric) / maxVal) * 100) : 0;
+
+    const item = document.createElement('div');
+    item.className = `lb-item rank-${i + 1}`;
+
+    let challengeHtml = '';
+    if (challenge && entry.progress !== undefined) {
+      const { pct, completed } = entry.progress;
+      challengeHtml = `
+        <div class="challenge-progress">
+          <div class="challenge-progress-bar-track">
+            <div class="challenge-progress-bar-fill ${completed ? 'completed' : ''}" style="width:${pct}%"></div>
+          </div>
+          <span class="challenge-progress-label">${completed ? '✅' : `${pct}%`}</span>
+        </div>`;
+    }
+
+    item.innerHTML = `
+      <div class="lb-rank">${MEDALS[i] || i + 1}</div>
+      <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${escapeHtml(entry.athlete.profile_medium)}" alt="" />` : '👤'}</div>
+      <div class="lb-info" style="flex:1">
+        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
+        ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
+        <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
+        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${barPct}%"></div></div>
+        ${challengeHtml}
+      </div>
+      <div class="lb-secondary">
+        <span class="lb-sec-item">${entry.totals.count} activité${entry.totals.count > 1 ? 's' : ''}</span>
+        ${entry.totals.distance > 0 ? `<span class="lb-sec-item"><strong>${fmtDistance(entry.totals.distance)}</strong></span>` : ''}
+        <span class="lb-sec-item"><strong>${fmtTime(entry.totals.moving_time)}</strong></span>
+      </div>
+      <div class="lb-metric">
+        <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
+        <div class="lb-metric-label">${metricLabel(metric)}</div>
+      </div>`;
+    list.appendChild(item);
+  });
 }
 
 // Back button
@@ -311,6 +399,83 @@ document.getElementById('leave-league-btn').addEventListener('click', async () =
   });
   loadLeagues();
 });
+
+// ── Challenge modal ───────────────────────────────────────────────────────────
+document.getElementById('challenge-btn').addEventListener('click', async () => {
+  // Load challenges list if not already loaded
+  if (!allChallenges.length) {
+    const data = await fetch('/api/leagues/challenges').then(r => r.json());
+    allChallenges = data.challenges || [];
+    allChallengeCategories = data.categories || [];
+  }
+  renderChallengeModal();
+  openModal('challenge-modal');
+});
+
+document.querySelectorAll('#challenge-modal .modal-cancel').forEach(btn => {
+  btn.addEventListener('click', () => closeModal('challenge-modal'));
+});
+
+document.getElementById('challenge-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('challenge-modal')) closeModal('challenge-modal');
+});
+
+document.getElementById('stop-challenge-btn').addEventListener('click', async () => {
+  if (!confirm('Arrêter le défi en cours ?')) return;
+  await setChallenge(null);
+  closeModal('challenge-modal');
+});
+
+function renderChallengeModal() {
+  const hasActiveChallenge = document.getElementById('challenge-banner').innerHTML !== '';
+  const stopBtn = document.getElementById('stop-challenge-btn');
+  stopBtn.classList.toggle('hidden', !hasActiveChallenge);
+
+  const list = document.getElementById('challenge-list');
+  list.innerHTML = '';
+
+  for (const cat of allChallengeCategories) {
+    const catEl = document.createElement('div');
+    catEl.className = 'challenge-category';
+    catEl.innerHTML = `<div class="challenge-category-title">${cat.emoji} ${escapeHtml(cat.label)}</div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'challenge-grid';
+
+    for (const id of cat.ids) {
+      const c = allChallenges.find(ch => ch.id === id);
+      if (!c) continue;
+      const card = document.createElement('button');
+      card.className = 'challenge-card';
+      card.innerHTML = `
+        <div class="challenge-card-emoji">${escapeHtml(c.emoji)}</div>
+        <div class="challenge-card-label">${escapeHtml(c.label)}</div>
+        <div class="challenge-card-desc">${escapeHtml(c.desc)}</div>`;
+      card.addEventListener('click', async () => {
+        await setChallenge(c.id);
+        closeModal('challenge-modal');
+      });
+      grid.appendChild(card);
+    }
+
+    catEl.appendChild(grid);
+    list.appendChild(catEl);
+  }
+}
+
+async function setChallenge(challengeId) {
+  if (!currentLeagueId) return;
+  try {
+    const res = await fetch('/api/leagues/set-challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: currentLeagueId, challengeId }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    loadLeagueDetail(currentLeagueId);
+  } catch (err) { alert('Erreur lors de la mise à jour du défi.'); }
+}
 
 // Copy code
 document.getElementById('copy-code-btn').addEventListener('click', () => {

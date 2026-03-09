@@ -113,8 +113,14 @@
                 <button class="btn-copy" id="copy-code-btn" title="Copier">📋</button>
               </div>
             </div>
-            <button id="leave-league-btn" class="btn-leave">Quitter</button>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0">
+              <button id="challenge-btn" class="btn-challenge hidden">🎯 Défi</button>
+              <button id="leave-league-btn" class="btn-leave">Quitter</button>
+            </div>
           </div>
+
+          <!-- Active challenge banner -->
+          <div id="challenge-banner" class="hidden"></div>
 
           <div class="leaderboard-header">
             <div class="week-label" id="league-week-label">Cette semaine</div>
@@ -159,6 +165,19 @@
       <div class="modal-actions">
         <button id="join-submit-btn" class="btn-primary">Rejoindre</button>
         <button class="modal-cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge picker modal -->
+  <div id="challenge-modal" class="modal hidden" role="dialog">
+    <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto">
+      <h2>🎯 Lancer un défi</h2>
+      <p class="modal-sub">Choisissez un défi pour tous les membres de la ligue.</p>
+      <div id="challenge-list"></div>
+      <div class="modal-actions" style="margin-top:1.25rem">
+        <button id="stop-challenge-btn" class="btn-danger-outline hidden">Arrêter le défi actuel</button>
+        <button class="modal-cancel">Fermer</button>
       </div>
     </div>
   </div>
