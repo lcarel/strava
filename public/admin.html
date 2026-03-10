@@ -159,6 +159,7 @@
           <div class="card"><div class="card-icon">🏆</div><div class="card-value" id="stat-leagues">–</div><div class="card-label">Ligues</div></div>
           <div class="card"><div class="card-icon">⭐</div><div class="card-value" id="stat-premium">–</div><div class="card-label">Premium</div></div>
           <div class="card"><div class="card-icon">🚫</div><div class="card-value" id="stat-banned">–</div><div class="card-label">Bannis</div></div>
+          <div class="card"><div class="card-icon">💬</div><div class="card-value" id="stat-feedback">–</div><div class="card-label">Avis (moy.)</div></div>
         </div>
       </div>
 
@@ -178,6 +179,30 @@
               </tr>
             </thead>
             <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Feedbacks -->
+      <div class="admin-section">
+        <div class="admin-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Retours utilisateurs</span>
+          <button id="clear-feedbacks-btn" class="btn-danger" style="text-transform:none;font-size:0.78rem">Tout effacer</button>
+        </div>
+        <div id="feedbacks-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="feedbacks-empty" class="empty-state hidden"><span>💬</span><p>Aucun retour pour l'instant.</p></div>
+        <div id="feedbacks-summary" class="hidden" style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap"></div>
+        <div id="feedbacks-table-wrap" class="hidden">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Athlète</th>
+                <th>Note</th>
+                <th>Commentaire</th>
+              </tr>
+            </thead>
+            <tbody id="feedbacks-tbody"></tbody>
           </table>
         </div>
       </div>

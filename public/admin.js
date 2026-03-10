@@ -26,6 +26,7 @@ async function init() {
   document.getElementById('admin-app').classList.remove('hidden');
   loadStats();
   loadUsers();
+  loadFeedbacks();
   loadLeagues();
 }
 
@@ -170,6 +171,63 @@ async function deleteUser(athleteId, name) {
     alert(data.error || 'Erreur');
   }
 }
+
+// ── Feedbacks ─────────────────────────────────────────────────────────────────
+async function loadFeedbacks() {
+  const loading = document.getElementById('feedbacks-loading');
+  const empty   = document.getElementById('feedbacks-empty');
+  const wrap    = document.getElementById('feedbacks-table-wrap');
+  const summary = document.getElementById('feedbacks-summary');
+  loading.classList.remove('hidden');
+  wrap.classList.add('hidden');
+  empty.classList.add('hidden');
+  summary.classList.add('hidden');
+
+  try {
+    const data = await fetch('/api/admin/feedbacks').then(r => r.json());
+
+    // Update summary stat card
+    document.getElementById('stat-feedback').textContent =
+      data.avgRating ? `${data.avgRating} ★` : '–';
+
+    if (!data.feedbacks?.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    // Mini summary
+    const counts = [0, 0, 0, 0, 0];
+    data.feedbacks.forEach(f => { if (f.rating >= 1 && f.rating <= 5) counts[f.rating - 1]++; });
+    summary.innerHTML = [5,4,3,2,1].map(n => `
+      <span style="font-size:0.85rem;color:var(--muted)">
+        ${'⭐'.repeat(n)} <strong style="color:var(--text)">${counts[n-1]}</strong>
+      </span>`).join('');
+    summary.classList.remove('hidden');
+
+    const tbody = document.getElementById('feedbacks-tbody');
+    tbody.innerHTML = '';
+    for (const f of data.feedbacks) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="muted">${fmtDate(f.createdAt)}</td>
+        <td class="muted" style="font-family:monospace;font-size:0.8rem">${escapeHtml(f.athleteId)}</td>
+        <td style="font-weight:700;color:var(--gold)">${'⭐'.repeat(f.rating)}</td>
+        <td style="max-width:320px;white-space:pre-wrap;word-break:break-word">${f.comment ? escapeHtml(f.comment) : '<span style="color:var(--muted)">–</span>'}</td>`;
+      tbody.appendChild(tr);
+    }
+    wrap.classList.remove('hidden');
+  } catch (err) {
+    console.error('Feedbacks error:', err);
+  } finally {
+    loading.classList.add('hidden');
+  }
+}
+
+document.getElementById('clear-feedbacks-btn').addEventListener('click', async () => {
+  if (!confirm('Effacer tous les retours utilisateurs ?')) return;
+  await fetch('/api/admin/feedbacks', { method: 'DELETE' });
+  loadFeedbacks();
+});
 
 // ── Leagues ───────────────────────────────────────────────────────────────────
 async function loadLeagues() {
