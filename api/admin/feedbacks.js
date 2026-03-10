@@ -16,8 +16,19 @@ export default async function handler(req, res) {
 
   const raw = await redis.lrange('feedbacks', 0, -1);
   const feedbacks = raw
-    .map(item => { try { return JSON.parse(item); } catch { return null; } })
-    .filter(Boolean)
+    .map(item => {
+      try {
+        const f = JSON.parse(item);
+        // Sanitize fields before returning to the client (belt-and-suspenders)
+        return {
+          athleteId: String(f.athleteId ?? '').slice(0, 20),
+          rating: Number.isInteger(f.rating) && f.rating >= 1 && f.rating <= 5 ? f.rating : null,
+          comment: String(f.comment ?? '').slice(0, 500),
+          createdAt: f.createdAt ?? null,
+        };
+      } catch { return null; }
+    })
+    .filter(f => f && f.rating !== null)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const avg = feedbacks.length

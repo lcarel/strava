@@ -252,11 +252,17 @@ async function submitFeedback() {
   const btn = document.getElementById('feedback-submit-btn');
   btn.disabled = true;
   try {
-    await fetch('/api/feedback', {
+    const res = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rating: feedbackRating, comment }),
     });
+    const data = await res.json();
+    if (!res.ok) {
+      btn.disabled = false;
+      alert(data.error || 'Erreur lors de l\'envoi.');
+      return;
+    }
     const doneKey = `feedback_done_${currentAthleteId}`;
     localStorage.setItem(doneKey, '1');
     document.getElementById('feedback-form-content').innerHTML = `
