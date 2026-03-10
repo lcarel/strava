@@ -404,6 +404,9 @@ async function loadMyStats() {
     const data = await fetch('/api/stats/week').then(r => r.json());
     if (data.error) throw new Error(data.error);
     renderMyStats(filterRunningData(data));
+    // Reload badges after stats (badge check is fire-and-forget server-side,
+    // small delay ensures the check has time to write to Redis before we read)
+    setTimeout(loadBadges, 1500);
   } catch (err) { console.error(err); }
   finally { document.getElementById('stats-loading').classList.add('hidden'); }
 }
