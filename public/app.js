@@ -386,6 +386,54 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   location.reload();
 });
 
+// ── Badge tooltip ─────────────────────────────────────────────────────────────
+let _badgeTooltipTarget = null;
+
+function showBadgeTooltip(btn, text) {
+  const tip = document.getElementById('badge-tooltip');
+  if (_badgeTooltipTarget === btn) {
+    hideBadgeTooltip();
+    return;
+  }
+  _badgeTooltipTarget = btn;
+  tip.textContent = text;
+  tip.classList.remove('hidden');
+
+  const r = btn.getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let top = r.top - th - 6;
+  let left = r.left + r.width / 2 - tw / 2;
+  if (top < 8) top = r.bottom + 6;
+  left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+  tip.style.top  = top + 'px';
+  tip.style.left = left + 'px';
+}
+
+function hideBadgeTooltip() {
+  document.getElementById('badge-tooltip').classList.add('hidden');
+  _badgeTooltipTarget = null;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.badge-info-btn')) hideBadgeTooltip();
+});
+
+function buildBadgeCard(b) {
+  const card = document.createElement('div');
+  card.className = 'badge-card' + (b.earned === false ? ' locked' : '');
+  const desc = b.earned === false ? `Non débloqué — ${b.desc}` : b.desc;
+  card.innerHTML = `
+    <button class="badge-info-btn" aria-label="Info">i</button>
+    <span class="badge-emoji">${b.emoji}</span>
+    <div class="badge-label">${escapeHtml(b.label)}</div>
+    ${b.count > 1 ? `<span class="badge-count">×${b.count}</span>` : ''}`;
+  card.querySelector('.badge-info-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    showBadgeTooltip(e.currentTarget, desc);
+  });
+  return card;
+}
+
 // ── Badges ────────────────────────────────────────────────────────────────────
 async function loadBadges() {
   try {
@@ -400,16 +448,7 @@ function renderBadges(badges) {
   if (!badges.length) { section.classList.add('hidden'); return; }
 
   grid.innerHTML = '';
-  for (const b of badges) {
-    const card = document.createElement('div');
-    card.className = 'badge-card';
-    card.setAttribute('data-desc', b.desc || b.label);
-    card.innerHTML = `
-      <span class="badge-emoji">${b.emoji}</span>
-      <div class="badge-label">${escapeHtml(b.label)}</div>
-      ${b.count > 1 ? `<span class="badge-count">×${b.count}</span>` : ''}`;
-    grid.appendChild(card);
-  }
+  for (const b of badges) grid.appendChild(buildBadgeCard(b));
   section.classList.remove('hidden');
 }
 
@@ -1070,16 +1109,7 @@ async function openAthleteProfile(athleteId, athleteData) {
     document.getElementById('am-loading').classList.add('hidden');
 
     const grid = document.getElementById('am-badges-grid');
-    for (const b of data.badges) {
-      const card = document.createElement('div');
-      card.className = 'badge-card' + (b.earned ? '' : ' locked');
-      card.setAttribute('data-desc', b.earned ? b.desc : `Non débloqué — ${b.desc}`);
-      card.innerHTML = `
-        <span class="badge-emoji">${b.emoji}</span>
-        <div class="badge-label">${escapeHtml(b.label)}</div>
-        ${b.count > 1 ? `<span class="badge-count">×${b.count}</span>` : ''}`;
-      grid.appendChild(card);
-    }
+    for (const b of data.badges) grid.appendChild(buildBadgeCard(b));
     document.getElementById('am-badges-wrap').classList.remove('hidden');
   } catch (err) {
     console.error(err);
