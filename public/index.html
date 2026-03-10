@@ -36,7 +36,7 @@
         <h1>Strava Stats</h1>
       </div>
       <div class="header-right">
-        <div class="athlete-badge" id="athlete-badge"></div>
+        <button class="athlete-badge" id="athlete-badge" title="Mon profil" aria-label="Ouvrir mon profil"></button>
         <span id="premium-badge" class="premium-badge hidden">⭐ Premium</span>
         <a href="/admin.html" id="admin-link" class="btn-logout hidden">Admin</a>
         <button id="theme-toggle" class="btn-theme" title="Changer le thème" aria-label="Changer le thème">☀️</button>
@@ -45,32 +45,15 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="my-stats">Mes stats</button>
-      <button class="tab" data-tab="history">Historique</button>
+      <button class="tab active" data-tab="history">Historique</button>
       <button class="tab" data-tab="leaderboard">Classement</button>
       <button class="tab" data-tab="leagues">Ligues</button>
     </nav>
 
     <main>
 
-      <!-- ── My stats ──────────────────────────────────────────────────────── -->
-      <div id="my-stats" class="tab-content">
-        <div class="week-label" id="week-label">Cette semaine</div>
-        <div class="cards-grid">
-          <div class="card"><div class="card-icon">🏃</div><div class="card-value" id="total-count">–</div><div class="card-label">Activités</div></div>
-          <div class="card"><div class="card-icon">📍</div><div class="card-value" id="total-distance">–</div><div class="card-label">Distance</div></div>
-          <div class="card"><div class="card-icon">⏱️</div><div class="card-value" id="total-time">–</div><div class="card-label">Temps total</div></div>
-          <div class="card"><div class="card-icon">⛰️</div><div class="card-value" id="total-elevation">–</div><div class="card-label">Dénivelé +</div></div>
-        </div>
-        <div id="badges-section" class="hidden"><h2 class="section-title">Mes badges</h2><div class="badges-grid" id="badges-grid"></div></div>
-        <div id="sport-section" class="hidden"><h2 class="section-title">Par sport</h2><div class="sport-grid" id="sport-grid"></div></div>
-        <div id="activities-section" class="hidden"><h2 class="section-title">Activités</h2><div class="activity-list" id="activity-list"></div></div>
-        <div id="empty-state" class="empty-state hidden"><span>😴</span><p>Aucune activité cette semaine — c'est le moment de sortir !</p></div>
-        <div id="stats-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
-      </div>
-
       <!-- ── History ───────────────────────────────────────────────────────── -->
-      <div id="history" class="tab-content hidden">
+      <div id="history" class="tab-content">
         <div id="history-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
         <div id="history-empty" class="empty-state hidden"><span>📭</span><p>Aucune activité sur les 4 dernières semaines.</p></div>
         <div id="history-list"></div>
@@ -171,6 +154,32 @@
 
     <!-- Feedback FAB -->
     <button class="feedback-fab hidden" id="feedback-fab" title="Donner mon avis" aria-label="Donner mon avis">💬</button>
+  </div>
+
+  <!-- ── Profile panel ──────────────────────────────────────────────────────── -->
+  <div id="profile-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Mon profil">
+    <div class="profile-panel-backdrop" id="profile-backdrop"></div>
+    <div class="profile-panel-drawer">
+      <div class="profile-panel-hdr">
+        <button id="close-profile-btn" class="btn-close-panel" aria-label="Fermer">✕</button>
+        <span class="profile-panel-title">Mon profil</span>
+        <div></div>
+      </div>
+      <div class="profile-panel-body">
+        <div class="week-label" id="week-label">Cette semaine</div>
+        <div class="cards-grid">
+          <div class="card"><div class="card-icon">🏃</div><div class="card-value" id="total-count">–</div><div class="card-label">Activités</div></div>
+          <div class="card"><div class="card-icon">📍</div><div class="card-value" id="total-distance">–</div><div class="card-label">Distance</div></div>
+          <div class="card"><div class="card-icon">⏱️</div><div class="card-value" id="total-time">–</div><div class="card-label">Temps total</div></div>
+          <div class="card"><div class="card-icon">⛰️</div><div class="card-value" id="total-elevation">–</div><div class="card-label">Dénivelé +</div></div>
+        </div>
+        <div id="badges-section" class="hidden"><h2 class="section-title">Mes badges</h2><div class="badges-grid" id="badges-grid"></div></div>
+        <div id="sport-section" class="hidden"><h2 class="section-title">Par sport</h2><div class="sport-grid" id="sport-grid"></div></div>
+        <div id="activities-section" class="hidden"><h2 class="section-title">Activités</h2><div class="activity-list" id="activity-list"></div></div>
+        <div id="empty-state" class="empty-state hidden"><span>😴</span><p>Aucune activité cette semaine — c'est le moment de sortir !</p></div>
+        <div id="stats-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Onboarding ────────────────────────────────────────────────────────── -->

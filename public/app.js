@@ -297,10 +297,9 @@ async function init() {
     updateElevationBtnLock();
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
-    loadMyStats();
+    loadHistory();
     showOnboarding(currentAthleteId);
     initFeedback(currentAthleteId);
-    loadBadges();
   } else {
     document.getElementById('landing').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -320,6 +319,23 @@ document.querySelectorAll('.tab').forEach(btn => {
     if (tab === 'leagues')     loadLeagues();
   });
 });
+
+// ── Profile panel ─────────────────────────────────────────────────────────────
+function openProfilePanel() {
+  document.getElementById('profile-panel').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  loadMyStats();
+  setTimeout(loadBadges, 1500);
+}
+
+function closeProfilePanel() {
+  document.getElementById('profile-panel').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('athlete-badge').addEventListener('click', openProfilePanel);
+document.getElementById('close-profile-btn').addEventListener('click', closeProfilePanel);
+document.getElementById('profile-backdrop').addEventListener('click', closeProfilePanel);
 
 // ── Premium helpers ────────────────────────────────────────────────────────────
 function openPremiumModal() { openModal('premium-modal'); }
@@ -399,13 +415,15 @@ function renderBadges(badges) {
 
 // ── My stats ──────────────────────────────────────────────────────────────────
 async function loadMyStats() {
+  // Reset sections before reload
+  ['sport-section', 'activities-section', 'empty-state', 'badges-section'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
   document.getElementById('stats-loading').classList.remove('hidden');
   try {
     const data = await fetch('/api/stats/week').then(r => r.json());
     if (data.error) throw new Error(data.error);
     renderMyStats(filterRunningData(data));
-    // Reload badges after stats (badge check is fire-and-forget server-side,
-    // small delay ensures the check has time to write to Redis before we read)
     setTimeout(loadBadges, 1500);
   } catch (err) { console.error(err); }
   finally { document.getElementById('stats-loading').classList.add('hidden'); }
