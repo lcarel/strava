@@ -1058,6 +1058,15 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   transform: translateY(-3px);
 }
 
+.badge-card.locked {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+.badge-card.locked:hover {
+  border-color: var(--border);
+  transform: none;
+}
+
 .badge-emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; line-height: 1; }
 .badge-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); line-height: 1.3; }
 

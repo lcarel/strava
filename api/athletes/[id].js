@@ -17,17 +17,23 @@ export default async function handler(req, res) {
 
   const rawBadges = await getAthleteBadges(String(id));
 
-  // Group by badge id, count occurrences, enrich with desc
-  const grouped = {};
+  // Group earned badges by id
+  const earned = {};
   for (const b of rawBadges) {
-    if (!grouped[b.id]) {
-      const def = BADGE_DEFS.find(d => d.id === b.id);
-      grouped[b.id] = { ...b, count: 0, desc: def?.desc ?? '' };
-    }
-    grouped[b.id].count++;
+    if (!earned[b.id]) earned[b.id] = { earnedAt: b.earnedAt, count: 0 };
+    earned[b.id].count++;
   }
 
-  const badges = Object.values(grouped).sort((a, b) => new Date(b.earnedAt) - new Date(a.earnedAt));
+  // Return ALL badge definitions, marking earned ones
+  const badges = BADGE_DEFS.map(def => ({
+    id: def.id,
+    emoji: def.emoji,
+    label: def.label,
+    desc: def.desc,
+    earned: !!earned[def.id],
+    count: earned[def.id]?.count ?? 0,
+    earnedAt: earned[def.id]?.earnedAt ?? null,
+  }));
 
   return res.status(200).json({
     athlete: {

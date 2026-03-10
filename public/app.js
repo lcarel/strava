@@ -1069,16 +1069,11 @@ async function openAthleteProfile(athleteId, athleteData) {
     const data = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}`).then(r => r.json());
     document.getElementById('am-loading').classList.add('hidden');
 
-    if (!data.badges?.length) {
-      document.getElementById('am-no-badges').classList.remove('hidden');
-      return;
-    }
-
     const grid = document.getElementById('am-badges-grid');
     for (const b of data.badges) {
       const card = document.createElement('div');
-      card.className = 'badge-card';
-      card.setAttribute('data-desc', b.desc || b.label);
+      card.className = 'badge-card' + (b.earned ? '' : ' locked');
+      card.setAttribute('data-desc', b.earned ? b.desc : `Non débloqué — ${b.desc}`);
       card.innerHTML = `
         <span class="badge-emoji">${b.emoji}</span>
         <div class="badge-label">${escapeHtml(b.label)}</div>
