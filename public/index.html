@@ -45,22 +45,14 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="history">Historique</button>
-      <button class="tab" data-tab="leaderboard">Classement</button>
+      <button class="tab active" data-tab="leaderboard">Classement</button>
       <button class="tab" data-tab="leagues">Ligues</button>
     </nav>
 
     <main>
 
-      <!-- ── History ───────────────────────────────────────────────────────── -->
-      <div id="history" class="tab-content">
-        <div id="history-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
-        <div id="history-empty" class="empty-state hidden"><span>📭</span><p>Aucune activité sur les 4 dernières semaines.</p></div>
-        <div id="history-list"></div>
-      </div>
-
       <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
-      <div id="leaderboard" class="tab-content hidden">
+      <div id="leaderboard" class="tab-content">
         <div class="leaderboard-header">
           <div class="week-label" id="lb-week-label">Cette semaine</div>
           <div class="metric-selector">
@@ -178,6 +170,12 @@
         <div id="activities-section" class="hidden"><h2 class="section-title">Activités</h2><div class="activity-list" id="activity-list"></div></div>
         <div id="empty-state" class="empty-state hidden"><span>😴</span><p>Aucune activité cette semaine — c'est le moment de sortir !</p></div>
         <div id="stats-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+
+        <div class="profile-panel-divider"></div>
+        <h2 class="section-title">Historique</h2>
+        <div id="history-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+        <div id="history-empty" class="empty-state hidden"><span>📭</span><p>Aucune activité sur les 4 dernières semaines.</p></div>
+        <div id="history-list"></div>
       </div>
     </div>
   </div>

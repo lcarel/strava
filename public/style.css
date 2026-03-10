@@ -220,6 +220,12 @@ header h1 { font-size: 1.2rem; font-weight: 700; }
   padding: 1.5rem 1.5rem 4rem;
 }
 
+.profile-panel-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0 1.5rem;
+}
+
 .btn-logout {
   background: var(--surface-2);
   color: var(--muted);

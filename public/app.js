@@ -297,7 +297,7 @@ async function init() {
     updateElevationBtnLock();
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
-    loadHistory();
+    loadLeaderboard();
     showOnboarding(currentAthleteId);
     initFeedback(currentAthleteId);
   } else {
@@ -314,7 +314,6 @@ document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.add('active');
     const tab = btn.dataset.tab;
     document.getElementById(tab).classList.remove('hidden');
-    if (tab === 'history')     loadHistory();
     if (tab === 'leaderboard') loadLeaderboard();
     if (tab === 'leagues')     loadLeagues();
   });
@@ -325,6 +324,7 @@ function openProfilePanel() {
   document.getElementById('profile-panel').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   loadMyStats();
+  loadHistory();
   setTimeout(loadBadges, 1500);
 }
 
