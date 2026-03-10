@@ -114,6 +114,166 @@ function buildWeekSelector(containerId, activeWeek, onChange) {
   }
 }
 
+// ── Theme ─────────────────────────────────────────────────────────────────────
+(function initTheme() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = saved === 'light' ? '🌙' : '☀️';
+})();
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'light' ? '🌙' : '☀️';
+});
+
+// ── Onboarding ────────────────────────────────────────────────────────────────
+const ONBOARDING_STEPS = [
+  { icon: '⚡', title: 'Bienvenue sur Strava Stats !', desc: 'Suis tes activités, défie tes amis et grimpe dans les classements. Fais-toi un tour rapide de l\'app !' },
+  { icon: '📊', title: 'Tes stats hebdo', desc: 'Chaque semaine, retrouve tes activités résumées : distance, temps de mouvement, dénivelé. Filtrées sur ta course et trail.' },
+  { icon: '🏆', title: 'Classement & Ligues', desc: 'Compare-toi à tous les athlètes connectés dans le classement global, ou crée une ligue privée avec tes amis pour des défis entre vous !' },
+  { icon: '🚀', title: 'C\'est parti !', desc: 'Explore l\'app, invite tes amis avec un code de ligue, et donne-nous ton avis via le bouton 💬 en bas à droite. Bonne chance !' },
+];
+
+let onboardingStep = 0;
+
+function showOnboarding(athleteId) {
+  const key = `onboarding_done_${athleteId}`;
+  if (localStorage.getItem(key)) return;
+
+  const modal = document.getElementById('onboarding-modal');
+  modal.classList.remove('hidden');
+  renderOnboardingStep();
+
+  document.getElementById('onboarding-next').addEventListener('click', () => {
+    onboardingStep++;
+    if (onboardingStep >= ONBOARDING_STEPS.length) {
+      closeOnboarding(key);
+    } else {
+      renderOnboardingStep();
+    }
+  });
+
+  document.getElementById('onboarding-skip').addEventListener('click', () => closeOnboarding(key));
+}
+
+function renderOnboardingStep() {
+  const step = ONBOARDING_STEPS[onboardingStep];
+  document.getElementById('onboarding-icon').textContent = step.icon;
+  document.getElementById('onboarding-title').textContent = step.title;
+  document.getElementById('onboarding-desc').textContent = step.desc;
+
+  const nextBtn = document.getElementById('onboarding-next');
+  nextBtn.textContent = onboardingStep === ONBOARDING_STEPS.length - 1 ? 'Commencer !' : 'Suivant →';
+
+  const skipBtn = document.getElementById('onboarding-skip');
+  skipBtn.style.display = onboardingStep === ONBOARDING_STEPS.length - 1 ? 'none' : '';
+
+  const stepsEl = document.getElementById('onboarding-steps');
+  stepsEl.innerHTML = ONBOARDING_STEPS.map((_, i) =>
+    `<div class="onboarding-dot${i === onboardingStep ? ' active' : ''}"></div>`
+  ).join('');
+}
+
+function closeOnboarding(storageKey) {
+  document.getElementById('onboarding-modal').classList.add('hidden');
+  localStorage.setItem(storageKey, '1');
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────────
+let feedbackRating = 0;
+
+function initFeedback(athleteId) {
+  const fab = document.getElementById('feedback-fab');
+  fab.classList.remove('hidden');
+
+  // Track visits and auto-show after 3rd
+  const visitKey = `visit_count_${athleteId}`;
+  const doneKey = `feedback_done_${athleteId}`;
+  if (!localStorage.getItem(doneKey)) {
+    const visits = parseInt(localStorage.getItem(visitKey) || '0') + 1;
+    localStorage.setItem(visitKey, String(visits));
+    if (visits === 3) {
+      setTimeout(() => openFeedbackModal(), 4000);
+    }
+  }
+
+  fab.addEventListener('click', openFeedbackModal);
+}
+
+function openFeedbackModal() {
+  feedbackRating = 0;
+  document.getElementById('feedback-comment').value = '';
+  document.getElementById('feedback-submit-btn').disabled = true;
+  document.querySelectorAll('.feedback-star').forEach(s => s.classList.remove('active'));
+
+  // Reset to form view in case success was shown before
+  const content = document.getElementById('feedback-form-content');
+  content.innerHTML = `
+    <p class="feedback-rating-label">Comment tu évalues l'app ?</p>
+    <div class="feedback-stars" id="feedback-stars">
+      <button class="feedback-star" data-value="1" aria-label="1 étoile">⭐</button>
+      <button class="feedback-star" data-value="2" aria-label="2 étoiles">⭐</button>
+      <button class="feedback-star" data-value="3" aria-label="3 étoiles">⭐</button>
+      <button class="feedback-star" data-value="4" aria-label="4 étoiles">⭐</button>
+      <button class="feedback-star" data-value="5" aria-label="5 étoiles">⭐</button>
+    </div>
+    <textarea class="feedback-textarea" id="feedback-comment" placeholder="Qu'est-ce qui te plaît ? Qu'est-ce qu'on pourrait améliorer ? (optionnel)" maxlength="500"></textarea>
+    <div class="modal-actions">
+      <button id="feedback-submit-btn" class="btn-primary" disabled>Envoyer</button>
+      <button class="modal-cancel">Annuler</button>
+    </div>`;
+
+  bindFeedbackStars();
+  document.getElementById('feedback-submit-btn').addEventListener('click', submitFeedback);
+  document.querySelectorAll('#feedback-modal .modal-cancel').forEach(btn => {
+    btn.addEventListener('click', () => closeModal('feedback-modal'));
+  });
+  openModal('feedback-modal');
+}
+
+function bindFeedbackStars() {
+  document.querySelectorAll('.feedback-star').forEach(btn => {
+    btn.addEventListener('click', () => {
+      feedbackRating = parseInt(btn.dataset.value);
+      document.querySelectorAll('.feedback-star').forEach((s, idx) => {
+        s.classList.toggle('active', idx < feedbackRating);
+      });
+      document.getElementById('feedback-submit-btn').disabled = false;
+    });
+  });
+}
+
+async function submitFeedback() {
+  const comment = document.getElementById('feedback-comment')?.value?.trim() || '';
+  const btn = document.getElementById('feedback-submit-btn');
+  btn.disabled = true;
+  try {
+    await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: feedbackRating, comment }),
+    });
+    const doneKey = `feedback_done_${currentAthleteId}`;
+    localStorage.setItem(doneKey, '1');
+    document.getElementById('feedback-form-content').innerHTML = `
+      <div class="feedback-success">
+        <span class="feedback-success-icon">🙏</span>
+        <p>Merci pour ton retour !<br>Ça nous aide vraiment à améliorer l'app.</p>
+      </div>
+      <div class="modal-actions" style="margin-top:1.25rem">
+        <button class="modal-cancel" style="flex:1">Fermer</button>
+      </div>`;
+    document.querySelector('#feedback-modal .modal-cancel').addEventListener('click', () => closeModal('feedback-modal'));
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   const params = new URLSearchParams(location.search);
@@ -132,6 +292,8 @@ async function init() {
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
     loadMyStats();
+    showOnboarding(currentAthleteId);
+    initFeedback(currentAthleteId);
   } else {
     document.getElementById('landing').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -818,6 +980,10 @@ async function kickMember(memberId, memberName) {
     loadLeagueDetail(currentLeagueId);
   } catch { alert('Erreur lors de l\'exclusion.'); }
 }
+
+document.getElementById('feedback-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('feedback-modal')) closeModal('feedback-modal');
+});
 
 // Expose for inline onclick usage
 window.openPremiumModal = openPremiumModal;

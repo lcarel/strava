@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Strava Stats</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    // Apply theme before render to avoid flash
+    (function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark'); })();
+  </script>
 </head>
 <body>
 
@@ -35,6 +39,7 @@
         <div class="athlete-badge" id="athlete-badge"></div>
         <span id="premium-badge" class="premium-badge hidden">⭐ Premium</span>
         <a href="/admin.html" id="admin-link" class="btn-logout hidden">Admin</a>
+        <button id="theme-toggle" class="btn-theme" title="Changer le thème" aria-label="Changer le thème">☀️</button>
         <button id="logout-btn" class="btn-logout">Déconnecter</button>
       </div>
     </header>
@@ -162,6 +167,23 @@
       </div>
 
     </main>
+
+    <!-- Feedback FAB -->
+    <button class="feedback-fab hidden" id="feedback-fab" title="Donner mon avis" aria-label="Donner mon avis">💬</button>
+  </div>
+
+  <!-- ── Onboarding ────────────────────────────────────────────────────────── -->
+  <div id="onboarding-modal" class="hidden" role="dialog" aria-modal="true">
+    <div class="onboarding-box">
+      <span class="onboarding-icon" id="onboarding-icon">⚡</span>
+      <h2 class="onboarding-title" id="onboarding-title">Bienvenue sur Strava Stats !</h2>
+      <p class="onboarding-desc" id="onboarding-desc">Suis tes activités, compare-toi à tes amis et crée des ligues. Tout ça en un clin d'œil.</p>
+      <div class="onboarding-steps" id="onboarding-steps"></div>
+      <div class="onboarding-actions">
+        <button class="btn-onboarding-next" id="onboarding-next">Suivant →</button>
+        <button class="btn-onboarding-skip" id="onboarding-skip">Passer</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Modals ─────────────────────────────────────────────────────────────── -->
@@ -233,6 +255,29 @@
       <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem">Contacte un administrateur pour activer le Premium sur ton compte.</p>
       <div class="modal-actions">
         <button class="modal-cancel" style="flex:1">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback modal -->
+  <div id="feedback-modal" class="modal hidden" role="dialog">
+    <div class="modal-box">
+      <h2>Ton avis compte 💬</h2>
+      <p class="modal-sub">2 minutes pour nous aider à améliorer l'app.</p>
+      <div id="feedback-form-content">
+        <p class="feedback-rating-label">Comment tu évalues l'app ?</p>
+        <div class="feedback-stars" id="feedback-stars">
+          <button class="feedback-star" data-value="1" aria-label="1 étoile">⭐</button>
+          <button class="feedback-star" data-value="2" aria-label="2 étoiles">⭐</button>
+          <button class="feedback-star" data-value="3" aria-label="3 étoiles">⭐</button>
+          <button class="feedback-star" data-value="4" aria-label="4 étoiles">⭐</button>
+          <button class="feedback-star" data-value="5" aria-label="5 étoiles">⭐</button>
+        </div>
+        <textarea class="feedback-textarea" id="feedback-comment" placeholder="Qu'est-ce qui te plaît ? Qu'est-ce qu'on pourrait améliorer ? (optionnel)" maxlength="500"></textarea>
+        <div class="modal-actions">
+          <button id="feedback-submit-btn" class="btn-primary" disabled>Envoyer</button>
+          <button class="modal-cancel">Annuler</button>
+        </div>
       </div>
     </div>
   </div>
