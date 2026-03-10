@@ -595,7 +595,8 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
     const sports = Object.keys(entry.by_sport);
 
     const item = document.createElement('div');
-    item.className = `lb-item rank-${i + 1}`;
+    item.className = `lb-item rank-${i + 1} clickable`;
+    item.title = `Voir le profil de ${entry.athlete.firstname}`;
     item.innerHTML = `
       <div class="lb-rank">${MEDALS[i] || i + 1}</div>
       <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${escapeHtml(entry.athlete.profile_medium)}" alt="" />` : '👤'}</div>
@@ -613,6 +614,7 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
       </div>`;
+    item.addEventListener('click', () => openAthleteProfile(entry.athlete.id, entry.athlete));
     list.appendChild(item);
   });
 }
@@ -756,7 +758,8 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
     const canKick = isManager && !isMe && (currentIsAdmin || entry.athlete.id !== creatorId);
 
     const item = document.createElement('div');
-    item.className = `lb-item rank-${i + 1}`;
+    item.className = `lb-item rank-${i + 1} clickable`;
+    item.title = `Voir le profil de ${entry.athlete.firstname}`;
 
     let challengeHtml = '';
     if (challenge && entry.progress !== undefined) {
@@ -790,8 +793,12 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
       </div>
       ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}`;
 
+    item.addEventListener('click', () => openAthleteProfile(entry.athlete.id, entry.athlete));
     if (canKick) {
-      item.querySelector('.btn-kick').addEventListener('click', () => kickMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`));
+      item.querySelector('.btn-kick').addEventListener('click', e => {
+        e.stopPropagation();
+        kickMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`);
+      });
     }
     list.appendChild(item);
   });
@@ -1038,6 +1045,59 @@ async function kickMember(memberId, memberName) {
 
 document.getElementById('feedback-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('feedback-modal')) closeModal('feedback-modal');
+});
+
+// ── Athlete profile modal ─────────────────────────────────────────────────────
+async function openAthleteProfile(athleteId, athleteData) {
+  // Prefill with data we already have
+  document.getElementById('am-name').textContent = `${athleteData.firstname} ${athleteData.lastname}`;
+  document.getElementById('am-city').textContent = athleteData.city ? `📍 ${athleteData.city}` : '';
+  const avatarEl = document.getElementById('am-avatar');
+  avatarEl.innerHTML = athleteData.profile_medium
+    ? `<img src="${escapeHtml(athleteData.profile_medium)}" alt="" />`
+    : '👤';
+
+  // Reset badge area
+  document.getElementById('am-badges-wrap').classList.add('hidden');
+  document.getElementById('am-no-badges').classList.add('hidden');
+  document.getElementById('am-badges-grid').innerHTML = '';
+  document.getElementById('am-loading').classList.remove('hidden');
+
+  openModal('athlete-modal');
+
+  try {
+    const data = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}`).then(r => r.json());
+    document.getElementById('am-loading').classList.add('hidden');
+
+    if (!data.badges?.length) {
+      document.getElementById('am-no-badges').classList.remove('hidden');
+      return;
+    }
+
+    const grid = document.getElementById('am-badges-grid');
+    for (const b of data.badges) {
+      const card = document.createElement('div');
+      card.className = 'badge-card';
+      card.setAttribute('data-desc', b.desc || b.label);
+      card.innerHTML = `
+        <span class="badge-emoji">${b.emoji}</span>
+        <div class="badge-label">${escapeHtml(b.label)}</div>
+        ${b.count > 1 ? `<span class="badge-count">×${b.count}</span>` : ''}`;
+      grid.appendChild(card);
+    }
+    document.getElementById('am-badges-wrap').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    document.getElementById('am-loading').classList.add('hidden');
+    document.getElementById('am-no-badges').classList.remove('hidden');
+  }
+}
+
+document.getElementById('athlete-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('athlete-modal')) closeModal('athlete-modal');
+});
+document.querySelectorAll('#athlete-modal .modal-cancel').forEach(btn => {
+  btn.addEventListener('click', () => closeModal('athlete-modal'));
 });
 
 // Expose for inline onclick usage

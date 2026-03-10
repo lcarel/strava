@@ -267,6 +267,30 @@
     </div>
   </div>
 
+  <!-- Athlete profile modal -->
+  <div id="athlete-modal" class="modal hidden" role="dialog">
+    <div class="modal-box" style="max-width:460px">
+      <div class="athlete-modal-header">
+        <div class="athlete-modal-avatar" id="am-avatar"></div>
+        <div class="athlete-modal-info">
+          <div class="athlete-modal-name" id="am-name"></div>
+          <div class="athlete-modal-city" id="am-city"></div>
+        </div>
+      </div>
+      <div id="am-loading" class="loading hidden"><div class="spinner"></div><p>Chargement...</p></div>
+      <div id="am-badges-wrap" class="hidden">
+        <h3 class="section-title" style="margin:1.25rem 0 0.75rem">Badges</h3>
+        <div class="badges-grid" id="am-badges-grid"></div>
+      </div>
+      <div id="am-no-badges" class="hidden" style="text-align:center;padding:1.5rem 0;color:var(--muted);font-size:0.9rem">
+        Pas encore de badge — ça viendra ! 🏃
+      </div>
+      <div class="modal-actions" style="margin-top:1.5rem">
+        <button class="modal-cancel" style="flex:1">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Feedback modal -->
   <div id="feedback-modal" class="modal hidden" role="dialog">
     <div class="modal-box">

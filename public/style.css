@@ -1002,6 +1002,36 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 .premium-features-list li { font-size: 0.9rem; display: flex; align-items: flex-start; gap: 0.6rem; }
 .premium-features-list li::before { content: '✓'; color: var(--premium); font-weight: 800; flex-shrink: 0; }
 
+/* ── Athlete profile modal ───────────────────────────────────────────────────── */
+.athlete-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.athlete-modal-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  border: 2px solid var(--border);
+}
+.athlete-modal-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.athlete-modal-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 0.2rem; }
+.athlete-modal-city { font-size: 0.85rem; color: var(--muted); }
+
+/* Clickable leaderboard items */
+.lb-item.clickable { cursor: pointer; }
+.lb-item.clickable:hover { border-color: rgba(252,76,2,0.4); }
+
 /* ── Badges ──────────────────────────────────────────────────────────────────── */
 .badges-grid {
   display: flex;
