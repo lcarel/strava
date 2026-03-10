@@ -300,6 +300,7 @@ async function init() {
     loadMyStats();
     showOnboarding(currentAthleteId);
     initFeedback(currentAthleteId);
+    loadBadges();
   } else {
     document.getElementById('landing').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -368,6 +369,33 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   location.reload();
 });
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+async function loadBadges() {
+  try {
+    const data = await fetch('/api/badges').then(r => r.json());
+    renderBadges(data.badges || []);
+  } catch (err) { console.error(err); }
+}
+
+function renderBadges(badges) {
+  const section = document.getElementById('badges-section');
+  const grid = document.getElementById('badges-grid');
+  if (!badges.length) { section.classList.add('hidden'); return; }
+
+  grid.innerHTML = '';
+  for (const b of badges) {
+    const card = document.createElement('div');
+    card.className = 'badge-card';
+    card.setAttribute('data-desc', b.desc || b.label);
+    card.innerHTML = `
+      <span class="badge-emoji">${b.emoji}</span>
+      <div class="badge-label">${escapeHtml(b.label)}</div>
+      ${b.count > 1 ? `<span class="badge-count">×${b.count}</span>` : ''}`;
+    grid.appendChild(card);
+  }
+  section.classList.remove('hidden');
+}
 
 // ── My stats ──────────────────────────────────────────────────────────────────
 async function loadMyStats() {

@@ -1,5 +1,6 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats } from '../../lib/strava.js';
+import { checkPerformanceBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -14,6 +15,8 @@ export default async function handler(req, res) {
 
   try {
     const data = await fetchWeekStats(session.athleteId);
+    // Fire-and-forget — badge checks don't block the response
+    checkPerformanceBadges(session.athleteId, data).catch(console.error);
     res.json(data);
   } catch (err) {
     console.error('Stats error:', err);

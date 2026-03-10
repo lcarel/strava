@@ -2,6 +2,7 @@ import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
 import { computeProgress } from '../../lib/challenges.js';
 import { isPremium } from '../../lib/premium.js';
+import { checkRankingBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -74,6 +75,12 @@ export default async function handler(req, res) {
       if (metric === 'elevation') return b.totals.elevation - a.totals.elevation;
       return b.totals.distance - a.totals.distance;
     });
+
+  // Award ranking badges for current week — sort by distance for fairness
+  if (week === 0) {
+    const byDistance = [...leaderboard].sort((a, b) => b.totals.distance - a.totals.distance);
+    checkRankingBadges(byDistance, id, getWeekStart(0).toISOString().slice(0, 10)).catch(console.error);
+  }
 
   res.json({
     league: { ...league, memberCount },
