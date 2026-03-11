@@ -798,6 +798,7 @@ function renderChallengeBanner(challenge) {
 function renderLeagueLeaderboard(leaderboard, metric, challenge) {
   const list = document.getElementById('league-lb-list');
   const empty = document.getElementById('league-lb-empty');
+  document.getElementById('league-points-info').classList.toggle('hidden', metric !== 'points');
   list.innerHTML = '';
 
   if (!leaderboard.length) { empty.classList.remove('hidden'); return; }
@@ -843,7 +844,6 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
-        ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
       </div>
       ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}`;
 
