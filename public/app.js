@@ -59,21 +59,32 @@ function fmtDate(iso) {
 }
 
 function metricValue(totals, metric) {
-  if (metric === 'time') return fmtTime(totals.moving_time);
-  if (metric === 'activities') return totals.count;
+  if (metric === 'time')      return fmtTime(totals.moving_time);
   if (metric === 'elevation') return totals.elevation > 0 ? Math.round(totals.elevation) + ' m' : '–';
+  if (metric === 'points')    return totals.points != null ? totals.points + ' pts' : '–';
   return totals.distance > 0 ? fmtDistance(totals.distance) : '–';
 }
 
 function metricRaw(totals, metric) {
-  if (metric === 'time') return totals.moving_time;
-  if (metric === 'activities') return totals.count;
+  if (metric === 'time')      return totals.moving_time;
   if (metric === 'elevation') return totals.elevation;
+  if (metric === 'points')    return totals.points ?? 0;
   return totals.distance;
 }
 
 function metricLabel(metric) {
-  return { distance: 'distance', time: 'temps', activities: 'activités', elevation: 'dénivelé' }[metric];
+  return { distance: 'distance', time: 'temps', elevation: 'dénivelé', points: 'points' }[metric] ?? metric;
+}
+
+function pointsDetail(totals) {
+  const distPts = Math.round(totals.distance / 1000);
+  const elevPts = Math.round(totals.elevation / 50);
+  const bonus   = (totals.points ?? 0) - distPts - elevPts;
+  const parts   = [];
+  if (distPts > 0) parts.push(`${distPts} km`);
+  if (elevPts > 0) parts.push(`${elevPts}×50m D+`);
+  if (bonus   > 0) parts.push(`+${bonus} défi`);
+  return parts.join(' + ') || '–';
 }
 
 function getClientWeekStart(weeksBack = 0) {
@@ -652,6 +663,7 @@ function renderLeaderboard(leaderboard, metric, listId, emptyId) {
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
+        ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
       </div>`;
     item.addEventListener('click', () => openAthleteProfile(entry.athlete.id, entry.athlete));
     list.appendChild(item);
@@ -829,6 +841,7 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
+        ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
       </div>
       ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}`;
 

@@ -1,13 +1,14 @@
 import { getSession } from '../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../lib/strava.js';
 import { isPremium } from '../lib/premium.js';
+import { computePoints } from '../lib/points.js';
 import redis from '../lib/redis.js';
 
 export default async function handler(req, res) {
   const session = await getSession(req, res);
   if (!session.athleteId) return res.status(401).json({ error: 'Not connected' });
 
-  const ALLOWED_METRICS = ['distance', 'time', 'activities', 'elevation'];
+  const ALLOWED_METRICS = ['distance', 'time', 'elevation', 'points'];
   const metric = req.query.metric || 'distance';
   if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
 
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
           const stats = week === 0
             ? await fetchWeekStats(athleteId)
             : await fetchHistoricalWeekStats(athleteId, week);
+          const totals = { ...stats.totals, points: computePoints(stats.totals) };
           return {
             athlete: {
               id: athleteId,
@@ -42,7 +44,7 @@ export default async function handler(req, res) {
               profile_medium: user.athlete.profile_medium,
               city: user.athlete.city,
             },
-            totals: stats.totals,
+            totals,
             by_sport: stats.by_sport,
           };
         } catch {
@@ -54,9 +56,9 @@ export default async function handler(req, res) {
     const leaderboard = results
       .filter(Boolean)
       .sort((a, b) => {
-        if (metric === 'time') return b.totals.moving_time - a.totals.moving_time;
-        if (metric === 'activities') return b.totals.count - a.totals.count;
-        if (metric === 'elevation') return b.totals.elevation - a.totals.elevation;
+        if (metric === 'time')      return b.totals.moving_time - a.totals.moving_time;
+        if (metric === 'elevation') return b.totals.elevation   - a.totals.elevation;
+        if (metric === 'points')    return b.totals.points      - a.totals.points;
         return b.totals.distance - a.totals.distance;
       });
 

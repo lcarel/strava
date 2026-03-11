@@ -1,6 +1,7 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
 import { computeProgress } from '../../lib/challenges.js';
+import { computePoints } from '../../lib/points.js';
 import { isPremium } from '../../lib/premium.js';
 import { checkRankingBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
@@ -49,6 +50,9 @@ export default async function handler(req, res) {
         const stats = week === 0
           ? await fetchWeekStats(athleteId)
           : await fetchHistoricalWeekStats(athleteId, week);
+        // Challenges only apply to the current week
+        const progress = (challenge && week === 0) ? computeProgress(stats, challenge) : null;
+        const totals = { ...stats.totals, points: computePoints(stats.totals, progress?.completed ?? false) };
         const entry = {
           athlete: {
             id: athleteId,
@@ -57,11 +61,10 @@ export default async function handler(req, res) {
             profile_medium: user.athlete.profile_medium,
             city: user.athlete.city,
           },
-          totals: stats.totals,
+          totals,
           by_sport: stats.by_sport,
         };
-        // Challenges only apply to the current week
-        if (challenge && week === 0) entry.progress = computeProgress(stats, challenge);
+        if (progress) entry.progress = progress;
         return entry;
       } catch { return null; }
     })
@@ -70,9 +73,9 @@ export default async function handler(req, res) {
   const leaderboard = results
     .filter(Boolean)
     .sort((a, b) => {
-      if (metric === 'time') return b.totals.moving_time - a.totals.moving_time;
-      if (metric === 'activities') return b.totals.count - a.totals.count;
-      if (metric === 'elevation') return b.totals.elevation - a.totals.elevation;
+      if (metric === 'time')      return b.totals.moving_time - a.totals.moving_time;
+      if (metric === 'elevation') return b.totals.elevation   - a.totals.elevation;
+      if (metric === 'points')    return b.totals.points      - a.totals.points;
       return b.totals.distance - a.totals.distance;
     });
 
