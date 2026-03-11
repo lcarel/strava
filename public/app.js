@@ -776,23 +776,62 @@ function renderPremiumUpsellBanner(containerId, show) {
     </div>`;
 }
 
+let _challengeTimerInterval = null;
+
+function fmtCountdown(ms) {
+  if (ms <= 0) return '00:00:00';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 function renderChallengeBanner(challenge) {
   const banner = document.getElementById('challenge-banner');
+
+  if (_challengeTimerInterval) { clearInterval(_challengeTimerInterval); _challengeTimerInterval = null; }
+
   if (!challenge) {
     banner.classList.add('hidden');
     banner.innerHTML = '';
     return;
   }
+
+  const expiresAt = challenge.expiresAt ? new Date(challenge.expiresAt).getTime() : null;
+  const expired   = challenge.expired ?? false;
+
+  const timerHtml = expiresAt
+    ? `<div class="challenge-timer ${expired ? 'expired' : ''}" id="challenge-countdown">
+        ${expired ? 'Défi terminé' : fmtCountdown(expiresAt - Date.now())}
+       </div>`
+    : '';
+
   banner.classList.remove('hidden');
   banner.innerHTML = `
     <div class="challenge-banner">
       <div class="challenge-banner-icon">${escapeHtml(challenge.emoji)}</div>
       <div class="challenge-banner-info">
-        <div class="challenge-banner-label">Défi en cours</div>
+        <div class="challenge-banner-label">${expired ? 'Défi terminé' : 'Défi en cours'}</div>
         <div class="challenge-banner-name">${escapeHtml(challenge.label)}</div>
         <div class="challenge-banner-desc">${escapeHtml(challenge.desc)}</div>
       </div>
+      ${timerHtml}
     </div>`;
+
+  if (expiresAt && !expired) {
+    _challengeTimerInterval = setInterval(() => {
+      const el = document.getElementById('challenge-countdown');
+      if (!el) { clearInterval(_challengeTimerInterval); return; }
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        el.textContent = 'Défi terminé';
+        el.classList.add('expired');
+        clearInterval(_challengeTimerInterval);
+      } else {
+        el.textContent = fmtCountdown(remaining);
+      }
+    }, 1000);
+  }
 }
 
 function renderLeagueLeaderboard(leaderboard, metric, challenge) {

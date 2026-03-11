@@ -1,6 +1,6 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
-import { computeProgress } from '../../lib/challenges.js';
+import { computeProgress, CHALLENGE_DURATION_MS } from '../../lib/challenges.js';
 import { computePoints } from '../../lib/points.js';
 import { isPremium } from '../../lib/premium.js';
 import { checkRankingBadges } from '../../lib/badges.js';
@@ -85,10 +85,23 @@ export default async function handler(req, res) {
     checkRankingBadges(byDistance, id, getWeekStart(week).toISOString().slice(0, 10)).catch(console.error);
   }
 
+  // Enrich challenge with expiry info before sending to client
+  let challengeOut = null;
+  if (week === 0 && challenge) {
+    const expiresAt = challenge.startedAt
+      ? new Date(challenge.startedAt).getTime() + CHALLENGE_DURATION_MS
+      : null;
+    challengeOut = {
+      ...challenge,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      expired:   expiresAt ? Date.now() > expiresAt : false,
+    };
+  }
+
   res.json({
     league: { ...league, memberCount },
     leaderboard,
-    challenge: week === 0 ? (challenge ?? null) : null,
+    challenge: challengeOut,
     week_start: getWeekStart(week).toISOString(),
     ...(premiumRequired ? { premiumRequired: true } : {}),
   });

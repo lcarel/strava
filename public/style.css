@@ -866,6 +866,16 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 .challenge-banner-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--orange); font-weight: 700; margin-bottom: 0.2rem; }
 .challenge-banner-name { font-weight: 800; font-size: 1.05rem; }
 .challenge-banner-desc { font-size: 0.82rem; color: var(--muted); margin-top: 0.1rem; }
+.challenge-timer {
+  margin-left: auto;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--orange);
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.challenge-timer.expired { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
 
 /* ── Challenge progress (in leaderboard) ─────────────────────────────────────── */
 .challenge-progress {
