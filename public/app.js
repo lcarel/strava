@@ -34,7 +34,7 @@ let currentIsAdmin = false;
 let currentIsPremium = false;
 let currentMetric = 'distance';
 let currentLbWeek = 0;
-let currentLeagueMetric = 'distance';
+let currentLeagueMetric = 'points';
 let currentLeagueWeek = 0;
 let currentLeagueId = null;
 let currentLeague = null;
@@ -77,14 +77,12 @@ function metricLabel(metric) {
 }
 
 function pointsDetail(totals) {
-  const distPts = Math.round(totals.distance / 1000);
-  const elevPts = Math.round(totals.elevation / 50);
-  const bonus   = (totals.points ?? 0) - distPts - elevPts;
-  const parts   = [];
-  if (distPts > 0) parts.push(`${distPts} km`);
-  if (elevPts > 0) parts.push(`${elevPts}×50m D+`);
-  if (bonus   > 0) parts.push(`+${bonus} défi`);
-  return parts.join(' + ') || '–';
+  const parts = [];
+  if (totals.distance > 0)  parts.push(`${fmtDistance(totals.distance)}`);
+  if (totals.elevation > 0) parts.push(`${Math.round(totals.elevation)} m D+`);
+  const bonus = (totals.points ?? 0) - Math.round(totals.distance / 1000) - Math.round(totals.elevation / 50);
+  if (bonus > 0) parts.push(`défi +${bonus}`);
+  return parts.join(' · ') || '–';
 }
 
 function getClientWeekStart(weeksBack = 0) {
@@ -727,6 +725,10 @@ function showLeaguesList() {
   currentLeagueId = null;
   currentLeague = null;
   currentLeagueWeek = 0;
+  currentLeagueMetric = 'points';
+  document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.metric === 'points');
+  });
 }
 
 // ── League detail ─────────────────────────────────────────────────────────────
