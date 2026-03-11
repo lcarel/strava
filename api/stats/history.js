@@ -1,6 +1,7 @@
 import { getSession } from '../../lib/session.js';
 import { fetchHistoricalWeekStats, getWeekStart } from '../../lib/strava.js';
 import { isPremium } from '../../lib/premium.js';
+import { checkPerformanceBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
         const weekEnd   = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
         const stats = await fetchHistoricalWeekStats(session.athleteId, weeksBack);
+        checkPerformanceBadges(session.athleteId, stats, weekStart.toISOString().slice(0, 10)).catch(console.error);
         return {
           week_start: weekStart.toISOString(),
           week_end:   weekEnd.toISOString(),

@@ -286,4 +286,28 @@ async function deleteLeague(leagueId, name) {
   }
 }
 
+// ── Backfill badges ───────────────────────────────────────────────────────────
+document.getElementById('backfill-badges-btn').addEventListener('click', async () => {
+  if (!confirm('Attribuer les badges rétroactivement pour tous les athlètes sur les 4 dernières semaines ?\nCela peut prendre quelques secondes.')) return;
+
+  const btn    = document.getElementById('backfill-badges-btn');
+  const status = document.getElementById('backfill-badges-status');
+  btn.disabled = true;
+  status.textContent = 'En cours...';
+
+  try {
+    const res  = await fetch('/api/admin/backfill-badges', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      status.textContent = `Terminé — ${data.athletes} athlètes, ${data.leagues} ligues traités (${data.errors} erreurs).`;
+    } else {
+      status.textContent = data.error || 'Erreur';
+    }
+  } catch (err) {
+    status.textContent = 'Erreur réseau';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 init();

@@ -76,10 +76,10 @@ export default async function handler(req, res) {
       return b.totals.distance - a.totals.distance;
     });
 
-  // Award ranking badges for current week — sort by distance for fairness
-  if (week === 0) {
+  // Award ranking badges for current week and last week — sort by distance for fairness
+  if (week <= 1) {
     const byDistance = [...leaderboard].sort((a, b) => b.totals.distance - a.totals.distance);
-    checkRankingBadges(byDistance, id, getWeekStart(0).toISOString().slice(0, 10)).catch(console.error);
+    checkRankingBadges(byDistance, id, getWeekStart(week).toISOString().slice(0, 10)).catch(console.error);
   }
 
   res.json({
