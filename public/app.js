@@ -325,7 +325,7 @@ function openProfilePanel() {
   document.body.style.overflow = 'hidden';
   loadMyStats();
   loadHistory();
-  setTimeout(loadBadges, 1500);
+  // setTimeout(loadBadges, 1500); // badges hidden
 }
 
 function closeProfilePanel() {
@@ -463,7 +463,7 @@ async function loadMyStats() {
     const data = await fetch('/api/stats/week').then(r => r.json());
     if (data.error) throw new Error(data.error);
     renderMyStats(filterRunningData(data));
-    setTimeout(loadBadges, 1500);
+    // setTimeout(loadBadges, 1500); // badges hidden
   } catch (err) { console.error(err); }
   finally { document.getElementById('stats-loading').classList.add('hidden'); }
 }
@@ -1108,13 +1108,10 @@ async function openAthleteProfile(athleteId, athleteData) {
     const data = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}`).then(r => r.json());
     document.getElementById('am-loading').classList.add('hidden');
 
-    const grid = document.getElementById('am-badges-grid');
-    for (const b of data.badges) grid.appendChild(buildBadgeCard(b));
-    document.getElementById('am-badges-wrap').classList.remove('hidden');
+    // badges hidden
   } catch (err) {
     console.error(err);
     document.getElementById('am-loading').classList.add('hidden');
-    document.getElementById('am-no-badges').classList.remove('hidden');
   }
 }
 
