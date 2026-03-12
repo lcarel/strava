@@ -1284,12 +1284,24 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 .feedback-success-icon { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
 .feedback-success p { color: var(--muted); font-size: 0.9rem; }
 
+/* ── Mobile menu button ──────────────────────────────────────────────────────── */
+.btn-mobile-menu {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1.2rem;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.mobile-menu-wrap { position: relative; }
+
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   header { padding: 0.75rem 1rem; gap: 0.5rem; }
   header h1 { display: none; }
-  .header-right { gap: 0.5rem; }
-  .athlete-badge { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs { padding: 0 0.5rem; }
   main { padding: 1.5rem 1rem 5rem; }
   .activity-stats { display: none; }
@@ -1299,4 +1311,37 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .leaderboard-header { flex-direction: column; }
   .league-detail-header { flex-direction: column; }
   .feedback-fab { bottom: 1rem; right: 1rem; }
+
+  .btn-mobile-menu { display: block; }
+
+  .header-right {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 100;
+  }
+  .header-right.open { display: flex; }
+
+  .header-right .athlete-badge,
+  .header-right .btn-logout,
+  .header-right .btn-theme {
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+    border-radius: 6px;
+  }
+  .header-right .premium-badge {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.82rem;
+  }
 }

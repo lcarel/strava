@@ -389,6 +389,24 @@ document.querySelectorAll('#league-metric-btns .metric-btn').forEach(btn => {
   });
 });
 
+// ── Mobile menu ───────────────────────────────────────────────────────────────
+const _mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const _headerRight   = document.getElementById('header-right');
+
+_mobileMenuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _headerRight.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+  if (!_headerRight.contains(e.target) && e.target !== _mobileMenuBtn) {
+    _headerRight.classList.remove('open');
+  }
+});
+
+// Close menu when any action inside is triggered
+_headerRight.addEventListener('click', () => _headerRight.classList.remove('open'));
+
 // ── Logout ────────────────────────────────────────────────────────────────────
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
