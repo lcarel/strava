@@ -36,11 +36,31 @@ export default async function handler(req, res) {
   const isMember = await redis.sismember(`league:${id}:members`, session.athleteId);
   if (!isMember) return res.status(403).json({ error: 'Accès refusé' });
 
-  const [memberIds, challenge] = await Promise.all([
+  const [memberIds, rawChallenge] = await Promise.all([
     redis.smembers(`league:${id}:members`),
     redis.get(`league:${id}:challenge`),
   ]);
   const memberCount = memberIds.length;
+
+  // ── Auto-archive challenge from a previous week ────────────────────────────
+  let challenge = rawChallenge;
+  if (challenge?.startedAt) {
+    const currentWeekStart = getWeekStart(0);
+    const challengeStarted = new Date(challenge.startedAt);
+    if (challengeStarted < currentWeekStart) {
+      const histKey = `league:${id}:challenge:history`;
+      const history = (await redis.get(histKey)) || [];
+      const updated  = [{ ...challenge, archivedAt: new Date().toISOString() }, ...history].slice(0, 20);
+      await Promise.all([
+        redis.set(histKey, updated, { ex: 365 * 24 * 60 * 60 }),
+        redis.del(`league:${id}:challenge`),
+      ]);
+      challenge = null;
+    }
+  }
+
+  // Load challenge history for response
+  const challengeHistory = (await redis.get(`league:${id}:challenge:history`)) || [];
 
   // ── Boosts (current week only) ─────────────────────────────────────────────
   let boostsReceivedMap = {}; // athleteId → count
@@ -126,6 +146,7 @@ export default async function handler(req, res) {
     league: { ...league, memberCount },
     leaderboard,
     challenge: challengeOut,
+    challengeHistory,
     week_start: getWeekStart(week).toISOString(),
     ...(premiumRequired ? { premiumRequired: true } : {}),
     ...(week === 0 ? { boosts: { myBoostsGiven, myBoostsRemaining: BOOSTS_PER_WEEK - myBoostsGiven.length } } : {}),

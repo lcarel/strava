@@ -19,8 +19,19 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Seul le créateur de la ligue peut gérer les défis' });
   }
 
+  // Archive existing challenge before replacing / clearing
+  async function archiveExisting() {
+    const existing = await redis.get(`league:${leagueId}:challenge`);
+    if (!existing) return;
+    const histKey = `league:${leagueId}:challenge:history`;
+    const history = (await redis.get(histKey)) || [];
+    const updated = [{ ...existing, archivedAt: new Date().toISOString() }, ...history].slice(0, 20);
+    await redis.set(histKey, updated, { ex: 365 * 24 * 60 * 60 });
+  }
+
   // Clear challenge
   if (!challengeId) {
+    await archiveExisting();
     await redis.del(`league:${leagueId}:challenge`);
     return res.json({ ok: true, challenge: null });
   }
@@ -32,6 +43,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Ce défi est réservé aux membres Premium.', premiumRequired: true });
   }
 
+  await archiveExisting();
   const challenge = { ...def, startedAt: new Date().toISOString() };
   await redis.set(`league:${leagueId}:challenge`, challenge);
 

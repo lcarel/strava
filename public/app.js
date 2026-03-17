@@ -771,7 +771,9 @@ async function loadLeagueDetail(id) {
     if (data.error) throw new Error(data.error);
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
-    renderChallengeBanner(currentLeagueWeek === 0 ? data.challenge : null);
+    const activeChallenge = (currentLeagueWeek === 0 && data.challenge && !data.challenge.expired) ? data.challenge : null;
+    renderChallengeBanner(activeChallenge);
+    renderChallengeHistory(data.challengeHistory || []);
     // If elevation/week was requested but fell back due to premium gate
     const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
     const effectiveWeek = (currentLeagueWeek > 0 && data.premiumRequired) ? 0 : currentLeagueWeek;
@@ -853,6 +855,36 @@ function renderChallengeBanner(challenge) {
     }, 1000);
   }
 }
+
+function renderChallengeHistory(history) {
+  const section = document.getElementById('league-challenge-history');
+  const list    = document.getElementById('league-challenge-history-list');
+  if (!history.length) { section.classList.add('hidden'); return; }
+
+  section.classList.remove('hidden');
+  list.innerHTML = '';
+  for (const c of history) {
+    const startDate = c.startedAt ? new Date(c.startedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '–';
+    const card = document.createElement('div');
+    card.className = 'challenge-history-card';
+    card.innerHTML = `
+      <span class="challenge-history-icon">${escapeHtml(c.emoji || '🎯')}</span>
+      <div class="challenge-history-info">
+        <div class="challenge-history-name">${escapeHtml(c.label)}</div>
+        <div class="challenge-history-meta">${escapeHtml(c.desc)}</div>
+      </div>
+      <div class="challenge-history-date">Lancé le ${startDate}</div>`;
+    list.appendChild(card);
+  }
+}
+
+document.getElementById('history-toggle-btn').addEventListener('click', () => {
+  const list = document.getElementById('league-challenge-history-list');
+  const icon = document.getElementById('history-toggle-icon');
+  const open = !list.classList.contains('hidden');
+  list.classList.toggle('hidden', open);
+  icon.textContent = open ? '▼' : '▲';
+});
 
 function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
   const list = document.getElementById('league-lb-list');
