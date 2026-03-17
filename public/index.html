@@ -48,14 +48,13 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="leaderboard">Classement</button>
-      <button class="tab" data-tab="leagues">Ligues</button>
+      <button class="tab active" data-tab="leagues">Ligues</button>
     </nav>
 
     <main>
 
       <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
-      <div id="leaderboard" class="tab-content">
+      <div id="leaderboard" class="tab-content hidden">
         <div class="leaderboard-header">
           <div class="week-label" id="lb-week-label">Cette semaine</div>
           <div class="metric-selector">
@@ -78,7 +77,7 @@
       </div>
 
       <!-- ── Leagues ───────────────────────────────────────────────────────── -->
-      <div id="leagues" class="tab-content hidden">
+      <div id="leagues" class="tab-content">
 
         <!-- League list view -->
         <div id="leagues-list-view">

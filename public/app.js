@@ -306,7 +306,7 @@ async function init() {
     updateElevationBtnLock();
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('landing').classList.add('hidden');
-    loadLeaderboard();
+    loadLeagues();
     showOnboarding(currentAthleteId);
     initFeedback(currentAthleteId);
   } else {
@@ -862,6 +862,15 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
 
   const isManager = currentLeague && (String(currentLeague.createdBy) === String(currentAthleteId) || currentIsAdmin);
   const creatorId = currentLeague ? String(currentLeague.createdBy) : null;
+
+  const allZero = leaderboard.every(e => metricRaw(e.totals, metric) === 0);
+  if (allZero) {
+    leaderboard = [...leaderboard].sort((a, b) => {
+      const nameA = `${a.athlete.firstname} ${a.athlete.lastname}`.toLowerCase();
+      const nameB = `${b.athlete.firstname} ${b.athlete.lastname}`.toLowerCase();
+      return nameA.localeCompare(nameB, 'fr');
+    });
+  }
 
   leaderboard.forEach((entry, i) => {
     const isMe = entry.athlete.id === currentAthleteId;
