@@ -707,6 +707,47 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 }
 .btn-kick:hover { background: rgba(229,62,62,0.15); border-color: #fc8181; }
 
+.btn-boost {
+  background: transparent;
+  border: 1px solid rgba(252,185,2,0.4);
+  color: #f5b942;
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+.btn-boost:hover { background: rgba(245,185,66,0.15); border-color: #f5b942; transform: scale(1.1); }
+.btn-boost.disabled { opacity: 0.35; cursor: default; }
+.btn-boost.disabled:hover { background: transparent; border-color: rgba(252,185,2,0.4); transform: none; }
+
+.boost-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  background: rgba(245,185,66,0.15);
+  color: #f5b942;
+  border: 1px solid rgba(245,185,66,0.3);
+  border-radius: 8px;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+  font-weight: 700;
+}
+
+.boost-info {
+  font-size: 0.82rem;
+  color: #f5b942;
+  background: rgba(245,185,66,0.08);
+  border: 1px solid rgba(245,185,66,0.2);
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+.boost-info.exhausted { color: var(--muted); background: rgba(136,136,170,0.06); border-color: var(--border); }
+
 /* ── Modals ──────────────────────────────────────────────────────────────────── */
 .modal {
   position: fixed;

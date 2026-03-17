@@ -80,8 +80,10 @@ function pointsDetail(totals) {
   const parts = [];
   if (totals.distance > 0)  parts.push(`${fmtDistance(totals.distance)}`);
   if (totals.elevation > 0) parts.push(`${Math.round(totals.elevation)} m D+`);
-  const bonus = (totals.points ?? 0) - Math.round(totals.distance / 1000) - Math.round(totals.elevation / 50);
-  if (bonus > 0) parts.push(`défi +${bonus}`);
+  const boostPts = totals.boostPoints || 0;
+  const challengeBonus = (totals.points ?? 0) - Math.round(totals.distance / 1000) - Math.round(totals.elevation / 50) - boostPts;
+  if (challengeBonus > 0) parts.push(`défi +${challengeBonus}`);
+  if (boostPts > 0) parts.push(`⚡ +${boostPts}`);
   return parts.join(' · ') || '–';
 }
 
@@ -774,7 +776,7 @@ async function loadLeagueDetail(id) {
     const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
     const effectiveWeek = (currentLeagueWeek > 0 && data.premiumRequired) ? 0 : currentLeagueWeek;
     renderPremiumUpsellBanner('league-premium-upsell', !!data.premiumRequired);
-    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveWeek === 0 ? data.challenge : null);
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveWeek === 0 ? data.challenge : null, data.boosts || null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }
@@ -852,11 +854,25 @@ function renderChallengeBanner(challenge) {
   }
 }
 
-function renderLeagueLeaderboard(leaderboard, metric, challenge) {
+function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
   const list = document.getElementById('league-lb-list');
   const empty = document.getElementById('league-lb-empty');
   document.getElementById('league-points-info').classList.toggle('hidden', metric !== 'points');
   list.innerHTML = '';
+
+  // Boost info bar
+  const boostInfoEl = document.getElementById('league-boost-info');
+  if (boosts) {
+    const { myBoostsRemaining, myBoostsGiven } = boosts;
+    const label = myBoostsRemaining === 0
+      ? '⚡ Boosts utilisés cette semaine'
+      : `⚡ ${myBoostsRemaining} boost${myBoostsRemaining > 1 ? 's' : ''} restant${myBoostsRemaining > 1 ? 's' : ''} cette semaine`;
+    boostInfoEl.textContent = label;
+    boostInfoEl.classList.remove('hidden');
+    boostInfoEl.className = `boost-info${myBoostsRemaining === 0 ? ' exhausted' : ''}`;
+  } else {
+    boostInfoEl.classList.add('hidden');
+  }
 
   if (!leaderboard.length) { empty.classList.remove('hidden'); return; }
 
@@ -876,6 +892,9 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
     const isMe = entry.athlete.id === currentAthleteId;
     const sports = Object.keys(entry.by_sport);
     const canKick = isManager && !isMe && (currentIsAdmin || entry.athlete.id !== creatorId);
+    const canBoost = boosts !== null && !isMe;
+    const alreadyBoosted = boosts && boosts.myBoostsGiven.includes(String(entry.athlete.id));
+    const noBoostsLeft = boosts && boosts.myBoostsRemaining === 0;
 
     const item = document.createElement('div');
     item.className = `lb-item rank-${i + 1} clickable`;
@@ -893,11 +912,22 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
         </div>`;
     }
 
+    const boostsReceivedHtml = (entry.totals.boostsReceived > 0)
+      ? `<span class="boost-badge" title="${entry.totals.boostsReceived} boost${entry.totals.boostsReceived > 1 ? 's' : ''} reçu${entry.totals.boostsReceived > 1 ? 's' : ''}">⚡×${entry.totals.boostsReceived}</span>`
+      : '';
+
+    let boostBtnHtml = '';
+    if (canBoost) {
+      const disabled = alreadyBoosted || noBoostsLeft;
+      const title = alreadyBoosted ? 'Déjà boosté cette semaine' : noBoostsLeft ? 'Plus de boosts disponibles' : `Booster ${entry.athlete.firstname} (+5 pts)`;
+      boostBtnHtml = `<button class="btn-boost${disabled ? ' disabled' : ''}" data-target-id="${escapeHtml(entry.athlete.id)}" title="${title}" ${disabled ? 'disabled' : ''}>⚡</button>`;
+    }
+
     item.innerHTML = `
       <div class="lb-rank">${MEDALS[i] || i + 1}</div>
       <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${escapeHtml(entry.athlete.profile_medium)}" alt="" />` : '👤'}</div>
       <div class="lb-info" style="flex:1">
-        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
+        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)} ${boostsReceivedHtml}</div>
         ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
         <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
         ${challengeHtml}
@@ -910,8 +940,10 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
       <div class="lb-metric">
         <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
         <div class="lb-metric-label">${metricLabel(metric)}</div>
+        ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
       </div>
-      ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}`;
+      ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}
+      ${boostBtnHtml}`;
 
     item.addEventListener('click', () => openAthleteProfile(entry.athlete.id, entry.athlete));
     if (canKick) {
@@ -920,8 +952,28 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge) {
         kickMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`);
       });
     }
+    if (canBoost && !alreadyBoosted && !noBoostsLeft) {
+      item.querySelector('.btn-boost').addEventListener('click', e => {
+        e.stopPropagation();
+        boostMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`);
+      });
+    }
     list.appendChild(item);
   });
+}
+
+async function boostMember(targetId, targetName) {
+  if (!currentLeagueId) return;
+  try {
+    const res = await fetch('/api/leagues/boost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: currentLeagueId, targetId }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    loadLeagueDetail(currentLeagueId);
+  } catch { alert('Erreur lors du boost.'); }
 }
 
 // Back button

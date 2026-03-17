@@ -1,7 +1,7 @@
 import { getSession } from '../../lib/session.js';
 import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
 import { computeProgress, CHALLENGE_DURATION_MS } from '../../lib/challenges.js';
-import { computePoints } from '../../lib/points.js';
+import { computePoints, BOOST_POINTS, BOOSTS_PER_WEEK } from '../../lib/points.js';
 import { isPremium } from '../../lib/premium.js';
 import { checkRankingBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
@@ -42,6 +42,23 @@ export default async function handler(req, res) {
   ]);
   const memberCount = memberIds.length;
 
+  // ── Boosts (current week only) ─────────────────────────────────────────────
+  let boostsReceivedMap = {}; // athleteId → count
+  let myBoostsGiven     = [];
+  if (week === 0) {
+    const weekStart  = getWeekStart(0).toISOString().slice(0, 10);
+    const boostValues = await Promise.all(
+      memberIds.map(mid => redis.get(`boost:${id}:${weekStart}:${mid}`))
+    );
+    memberIds.forEach((mid, idx) => {
+      const targets = boostValues[idx] || [];
+      targets.forEach(targetId => {
+        boostsReceivedMap[targetId] = (boostsReceivedMap[targetId] || 0) + 1;
+      });
+      if (String(mid) === String(session.athleteId)) myBoostsGiven = targets;
+    });
+  }
+
   const results = await Promise.all(
     memberIds.map(async (athleteId) => {
       try {
@@ -52,7 +69,14 @@ export default async function handler(req, res) {
           : await fetchHistoricalWeekStats(athleteId, week);
         // Challenges only apply to the current week
         const progress = (challenge && week === 0) ? computeProgress(stats, challenge) : null;
-        const totals = { ...stats.totals, points: computePoints(stats.totals, progress?.completed ?? false) };
+        const boostsReceived = boostsReceivedMap[athleteId] || 0;
+        const boostPoints    = boostsReceived * BOOST_POINTS;
+        const totals = {
+          ...stats.totals,
+          points: computePoints(stats.totals, progress?.completed ?? false) + boostPoints,
+          boostsReceived,
+          boostPoints,
+        };
         const entry = {
           athlete: {
             id: athleteId,
@@ -104,5 +128,6 @@ export default async function handler(req, res) {
     challenge: challengeOut,
     week_start: getWeekStart(week).toISOString(),
     ...(premiumRequired ? { premiumRequired: true } : {}),
+    ...(week === 0 ? { boosts: { myBoostsGiven, myBoostsRemaining: BOOSTS_PER_WEEK - myBoostsGiven.length } } : {}),
   });
 }
