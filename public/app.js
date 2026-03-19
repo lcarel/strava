@@ -959,7 +959,8 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
       <div class="lb-rank">${MEDALS[i] || i + 1}</div>
       <div class="lb-avatar">${entry.athlete.profile_medium ? `<img src="${escapeHtml(entry.athlete.profile_medium)}" alt="" />` : '👤'}</div>
       <div class="lb-info" style="flex:1">
-        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)} ${boostsReceivedHtml}</div>
+        <div class="lb-name ${isMe ? 'is-me' : ''}">${escapeHtml(entry.athlete.firstname)} ${escapeHtml(entry.athlete.lastname)}</div>
+        ${boostsReceivedHtml}
         ${entry.athlete.city ? `<div class="lb-city">📍 ${escapeHtml(entry.athlete.city)}</div>` : ''}
         <div class="lb-sports">${sports.map(s => `<span class="lb-sport-tag">${sportIcon(s)} ${escapeHtml(s)}</span>`).join('')}</div>
         ${challengeHtml}
