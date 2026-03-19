@@ -1,6 +1,8 @@
 import { getSession } from '../../lib/session.js';
-import { getWeekStart } from '../../lib/strava.js';
+import { getWeekStart, getUser } from '../../lib/strava.js';
 import { BOOST_POINTS, BOOSTS_PER_WEEK } from '../../lib/points.js';
+import { createNotification } from '../../lib/notifications.js';
+import { sendPush } from '../../lib/push.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -38,7 +40,20 @@ export default async function handler(req, res) {
   }
 
   const updated = [...given, String(targetId)];
-  await redis.set(boostKey, updated, { ex: 8 * 24 * 60 * 60 }); // TTL 8 jours
+  await redis.set(boostKey, updated, { ex: 8 * 24 * 60 * 60 });
+
+  // ── Notif + push (non-bloquant) ────────────────────────────────────────────
+  const giver = await getUser(session.athleteId).catch(() => null);
+  const giverName = giver ? `${giver.athlete.firstname} ${giver.athlete.lastname}` : 'Un membre';
+  const notifPayload = {
+    type:       'boost',
+    title:      '⚡ Tu as été boosté !',
+    body:       `${giverName} t'a donné un boost dans "${league.name}" (+${BOOST_POINTS} pts)`,
+    leagueId,
+    leagueName: league.name,
+  };
+  createNotification(targetId, notifPayload).catch(() => {});
+  sendPush(targetId, { ...notifPayload, icon: '/icons/apple-touch-icon.png' }).catch(() => {});
 
   return res.json({ ok: true, boostPoints: BOOST_POINTS, remaining: BOOSTS_PER_WEEK - updated.length });
 }

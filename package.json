@@ -8,6 +8,7 @@
   "dependencies": {
     "@upstash/redis": "^1.36.3",
     "dotenv": "^16.3.1",
-    "iron-session": "^8.0.4"
+    "iron-session": "^8.0.4",
+    "web-push": "^3.6.7"
   }
 }

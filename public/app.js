@@ -311,6 +311,7 @@ async function init() {
     loadLeagues();
     showOnboarding(currentAthleteId);
     initFeedback(currentAthleteId);
+    initNotifications();
   } else {
     document.getElementById('landing').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -1290,5 +1291,182 @@ document.querySelectorAll('#athlete-modal .modal-cancel').forEach(btn => {
 
 // Expose for inline onclick usage
 window.openPremiumModal = openPremiumModal;
+
+// ── Notifications in-app + Push ───────────────────────────────────────────────
+let _notifPollInterval = null;
+
+async function initNotifications() {
+  document.getElementById('notif-btn').classList.remove('hidden');
+
+  // Chargement initial
+  await refreshNotifications();
+
+  // Polling toutes les 30s
+  _notifPollInterval = setInterval(refreshNotifications, 30_000);
+
+  // Rafraîchit aussi au focus de la fenêtre
+  window.addEventListener('focus', refreshNotifications);
+
+  // Enregistrement Service Worker + Push
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await setupPush(reg);
+    } catch (e) { console.warn('SW registration failed:', e); }
+  }
+}
+
+async function refreshNotifications() {
+  try {
+    const { notifications } = await fetch('/api/notifications').then(r => r.json());
+    renderNotifBadge(notifications);
+  } catch {}
+}
+
+function renderNotifBadge(notifications) {
+  const unread = notifications.filter(n => !n.read).length;
+  const badge  = document.getElementById('notif-badge');
+  if (unread > 0) {
+    badge.textContent = unread > 9 ? '9+' : unread;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+  // Mise à jour du panel si ouvert
+  if (!document.getElementById('notif-panel').classList.contains('hidden')) {
+    renderNotifList(notifications);
+  }
+}
+
+function renderNotifList(notifications) {
+  const list = document.getElementById('notif-list');
+  if (!notifications.length) {
+    list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const n of notifications) {
+    const el = document.createElement('div');
+    el.className = `notif-item${n.read ? ' read' : ''}`;
+    const date = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    el.innerHTML = `
+      <div class="notif-icon">${n.type === 'boost' ? '⚡' : '🎯'}</div>
+      <div class="notif-content">
+        <div class="notif-title">${escapeHtml(n.title)}</div>
+        <div class="notif-body">${escapeHtml(n.body)}</div>
+        <div class="notif-date">${date}</div>
+      </div>`;
+    if (n.leagueId) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => {
+        closeNotifPanel();
+        // Naviguer vers la ligue si on la connaît
+        const league = currentLeague && String(currentLeague.id) === String(n.leagueId) ? currentLeague : { id: n.leagueId, name: n.leagueName || '', code: '' };
+        openLeague(league);
+      });
+    }
+    list.appendChild(el);
+  }
+}
+
+async function openNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  panel.classList.remove('hidden');
+  // Charger + afficher
+  try {
+    const { notifications } = await fetch('/api/notifications').then(r => r.json());
+    renderNotifList(notifications);
+    // Marquer lues
+    await fetch('/api/notifications', { method: 'POST' });
+    document.getElementById('notif-badge').classList.add('hidden');
+  } catch {}
+}
+
+function closeNotifPanel() {
+  document.getElementById('notif-panel').classList.add('hidden');
+}
+
+document.getElementById('notif-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const panel = document.getElementById('notif-panel');
+  if (panel.classList.contains('hidden')) openNotifPanel();
+  else closeNotifPanel();
+});
+
+document.getElementById('notif-close-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  closeNotifPanel();
+});
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('notif-wrap');
+  if (wrap && !wrap.contains(e.target)) closeNotifPanel();
+});
+
+// ── Web Push ──────────────────────────────────────────────────────────────────
+async function setupPush(swReg) {
+  if (!('PushManager' in window)) return;
+
+  // Récupère la clé publique VAPID
+  const { publicKey } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+  if (!publicKey) return;
+
+  // Vérifie si déjà souscrit
+  let sub = await swReg.pushManager.getSubscription();
+  if (sub) { await registerSubscription(sub); return; }
+
+  // Demande la permission (doit être déclenché par un geste user — on le diffère)
+  if (Notification.permission === 'granted') {
+    sub = await subscribeToPush(swReg, publicKey);
+    if (sub) await registerSubscription(sub);
+  } else if (Notification.permission === 'default') {
+    // Affiche un prompt discret pour activer les notifs push
+    showPushPrompt(swReg, publicKey);
+  }
+}
+
+function showPushPrompt(swReg, publicKey) {
+  // On ajoute un bouton discret sous la cloche
+  const btn = document.getElementById('notif-btn');
+  const prompt = document.createElement('div');
+  prompt.id = 'push-prompt';
+  prompt.className = 'push-prompt';
+  prompt.innerHTML = `<span>Activer les notifications push ?</span><button id="push-allow-btn" class="push-allow-btn">Activer</button><button id="push-deny-btn" class="push-deny-btn">✕</button>`;
+  document.body.appendChild(prompt);
+
+  document.getElementById('push-allow-btn').addEventListener('click', async () => {
+    prompt.remove();
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const sub = await subscribeToPush(swReg, publicKey);
+      if (sub) await registerSubscription(sub);
+    }
+  });
+  document.getElementById('push-deny-btn').addEventListener('click', () => prompt.remove());
+}
+
+async function subscribeToPush(swReg, publicKey) {
+  try {
+    return await swReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+  } catch { return null; }
+}
+
+async function registerSubscription(sub) {
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription: sub.toJSON() }),
+  }).catch(() => {});
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
 
 init();

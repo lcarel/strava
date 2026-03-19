@@ -1,6 +1,8 @@
 import { getSession } from '../../lib/session.js';
 import { CHALLENGES } from '../../lib/challenges.js';
 import { isPremium } from '../../lib/premium.js';
+import { createNotification } from '../../lib/notifications.js';
+import { sendPushToMany } from '../../lib/push.js';
 import redis from '../../lib/redis.js';
 
 export default async function handler(req, res) {
@@ -46,6 +48,22 @@ export default async function handler(req, res) {
   await archiveExisting();
   const challenge = { ...def, startedAt: new Date().toISOString() };
   await redis.set(`league:${leagueId}:challenge`, challenge);
+
+  // ── Notifier tous les membres (sauf le créateur) ───────────────────────────
+  const memberIds = await redis.smembers(`league:${leagueId}:members`);
+  const targets   = memberIds.filter(id => String(id) !== String(session.athleteId));
+  if (targets.length) {
+    const notifPayload = {
+      type:       'challenge',
+      title:      `🎯 Nouveau défi dans "${league.name}"`,
+      body:       `${def.emoji} ${def.label} — ${def.desc}`,
+      leagueId,
+      leagueName: league.name,
+    };
+    // Notifs in-app + push en parallèle, non-bloquant
+    Promise.allSettled(targets.map(id => createNotification(id, notifPayload))).catch(() => {});
+    sendPushToMany(targets, { ...notifPayload, icon: '/icons/apple-touch-icon.png' });
+  }
 
   res.json({ ok: true, challenge });
 }
