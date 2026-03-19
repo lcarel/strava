@@ -976,18 +976,20 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
         <div class="lb-metric-label">${metricLabel(metric)}</div>
         ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
       </div>
-      ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}
-      ${boostBtnHtml}`;
+      ${(canKick || (canBoost)) ? `<div class="lb-actions">
+        ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}
+        ${boostBtnHtml}
+      </div>` : ''}`;
 
     item.addEventListener('click', () => openAthleteProfile(entry.athlete.id, entry.athlete));
     if (canKick) {
-      item.querySelector('.btn-kick').addEventListener('click', e => {
+      item.querySelector('.btn-kick')?.addEventListener('click', e => {
         e.stopPropagation();
         kickMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`);
       });
     }
     if (canBoost && !alreadyBoosted && !noBoostsLeft) {
-      item.querySelector('.btn-boost').addEventListener('click', e => {
+      item.querySelector('.btn-boost')?.addEventListener('click', e => {
         e.stopPropagation();
         boostMember(entry.athlete.id, `${entry.athlete.firstname} ${entry.athlete.lastname}`);
       });

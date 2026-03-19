@@ -137,7 +137,7 @@
                 <button class="btn-copy" id="copy-code-btn" title="Copier">📋</button>
               </div>
             </div>
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0">
+            <div class="league-detail-actions">
               <button id="rename-league-btn" class="btn-challenge hidden">✏️ Renommer</button>
               <button id="challenge-btn" class="btn-challenge hidden">🎯 Défi</button>
               <button id="leave-league-btn" class="btn-leave">Quitter</button>
@@ -165,7 +165,8 @@
           </div>
 
           <div id="league-points-info" class="points-info hidden">
-            1 pt / km &nbsp;·&nbsp; 1 pt / 50 m D+ &nbsp;·&nbsp; +20 pts si le défi de la semaine est complété &nbsp;·&nbsp; +5 pts par boost reçu
+            <span class="hide-mobile">1 pt / km &nbsp;·&nbsp; 1 pt / 50 m D+ &nbsp;·&nbsp; +20 pts si le défi est complété &nbsp;·&nbsp; ⚡ +5 pts par boost</span>
+            <span class="show-mobile">1 pt/km · D+/50 · +20 défi · ⚡ +5 boost</span>
           </div>
           <div id="league-boost-info" class="boost-info hidden"></div>
           <div id="league-premium-upsell" class="hidden"></div>
