@@ -33,9 +33,9 @@ let currentAthleteId = null;
 let currentIsAdmin = false;
 let currentIsPremium = false;
 let currentMetric = 'distance';
-let currentLbWeek = 0;
+let currentLbMonth = 0;
 let currentLeagueMetric = 'points';
-let currentLeagueWeek = 0;
+let currentLeagueMonth = 0;
 let currentLeagueId = null;
 let currentLeague = null;
 let allChallenges = [];
@@ -87,39 +87,36 @@ function pointsDetail(totals) {
   return parts.join(' · ') || '–';
 }
 
-function getClientWeekStart(weeksBack = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - weeksBack * 7);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function getClientMonthStart(monthsBack = 0) {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
 }
 
-function weekRangeLabel(week_start) {
-  const s = new Date(week_start);
-  const end = new Date(s);
-  end.setDate(end.getDate() + 6);
-  const today = new Date();
-  const e = end > today ? today : end;
-  return `Semaine du ${s.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${e.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+function monthLabel(period_start) {
+  const d = new Date(period_start);
+  const now = new Date();
+  const isCurrentMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  if (isCurrentMonth) return `Ce mois — ${d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+  return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
 
-function buildWeekSelector(containerId, activeWeek, onChange) {
+function buildMonthSelector(containerId, activeMonth, onChange) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
-  for (let w = 0; w <= 4; w++) {
-    const btn = document.createElement('button');
-    const locked = w > 1 && !currentIsPremium;
-    btn.className = 'metric-btn' + (w === activeWeek ? ' active' : '') + (locked ? ' premium-locked' : '');
-    if (w === 0) {
-      btn.textContent = 'Cette sem.';
+  for (let m = 0; m <= 3; m++) {
+    const btn    = document.createElement('button');
+    const locked = m > 1 && !currentIsPremium;
+    btn.className = 'metric-btn' + (m === activeMonth ? ' active' : '') + (locked ? ' premium-locked' : '');
+    if (m === 0) {
+      btn.textContent = 'Ce mois';
     } else {
-      const d = getClientWeekStart(w);
-      btn.textContent = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      const d = getClientMonthStart(m);
+      btn.textContent = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
     }
     btn.addEventListener('click', () => {
       if (locked) { openPremiumModal(); return; }
-      onChange(w);
+      onChange(m);
     });
     container.appendChild(btn);
   }
@@ -624,8 +621,8 @@ async function loadHistory() {
 
 // ── Global leaderboard ────────────────────────────────────────────────────────
 async function loadLeaderboard() {
-  buildWeekSelector('lb-week-btns', currentLbWeek, (w) => {
-    currentLbWeek = w;
+  buildMonthSelector('lb-week-btns', currentLbMonth, (m) => {
+    currentLbMonth = m;
     loadLeaderboard();
   });
 
@@ -634,7 +631,7 @@ async function loadLeaderboard() {
   document.getElementById('lb-empty').classList.add('hidden');
   loading.classList.remove('hidden');
   try {
-    const res = await fetch(`/api/leaderboard?metric=${currentMetric}&week=${currentLbWeek}`);
+    const res = await fetch(`/api/leaderboard?metric=${currentMetric}&month=${currentLbMonth}`);
     const data = await res.json();
     if (!res.ok) {
       if (data.premiumRequired) {
@@ -646,7 +643,7 @@ async function loadLeaderboard() {
       throw new Error(data.error);
     }
     renderPremiumUpsellBanner('lb-premium-upsell', false);
-    document.getElementById('lb-week-label').textContent = weekRangeLabel(data.week_start);
+    document.getElementById('lb-week-label').textContent = monthLabel(data.week_start);
     renderLeaderboard(data.leaderboard.map(filterRunningData), currentMetric, 'lb-list', 'lb-empty');
   } catch (err) { console.error(err); }
   finally { loading.classList.add('hidden'); }
@@ -745,7 +742,7 @@ function showLeaguesList() {
   document.getElementById('league-detail-view').classList.add('hidden');
   currentLeagueId = null;
   currentLeague = null;
-  currentLeagueWeek = 0;
+  currentLeagueMonth = 0;
   currentLeagueMetric = 'points';
   document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.metric === 'points');
@@ -754,11 +751,10 @@ function showLeaguesList() {
 
 // ── League detail ─────────────────────────────────────────────────────────────
 async function loadLeagueDetail(id) {
-  buildWeekSelector('league-week-btns', currentLeagueWeek, (w) => {
-    currentLeagueWeek = w;
-    // Hide challenge button on historical weeks
+  buildMonthSelector('league-week-btns', currentLeagueMonth, (m) => {
+    currentLeagueMonth = m;
     const isManager = currentLeague && (String(currentLeague.createdBy) === String(currentAthleteId) || currentIsAdmin);
-    document.getElementById('challenge-btn').classList.toggle('hidden', !isManager || w > 0);
+    document.getElementById('challenge-btn').classList.toggle('hidden', !isManager || m > 0);
     document.getElementById('rename-league-btn').classList.toggle('hidden', !isManager);
     loadLeagueDetail(id);
   });
@@ -768,18 +764,17 @@ async function loadLeagueDetail(id) {
   document.getElementById('league-lb-empty').classList.add('hidden');
 
   try {
-    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}&week=${currentLeagueWeek}`).then(r => r.json());
+    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}&month=${currentLeagueMonth}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
-    document.getElementById('league-week-label').textContent = weekRangeLabel(data.week_start);
-    const activeChallenge = (currentLeagueWeek === 0 && data.challenge && !data.challenge.expired) ? data.challenge : null;
+    document.getElementById('league-week-label').textContent = monthLabel(data.week_start);
+    const activeChallenge = (currentLeagueMonth === 0 && data.challenge && !data.challenge.expired) ? data.challenge : null;
     renderChallengeBanner(activeChallenge);
     renderChallengeHistory(data.challengeHistory || []);
-    // If elevation/week was requested but fell back due to premium gate
     const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
-    const effectiveWeek = (currentLeagueWeek > 0 && data.premiumRequired) ? 0 : currentLeagueWeek;
+    const effectiveMonth  = (currentLeagueMonth > 0 && data.premiumRequired) ? 0 : currentLeagueMonth;
     renderPremiumUpsellBanner('league-premium-upsell', !!data.premiumRequired);
-    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveWeek === 0 ? data.challenge : null, data.boosts || null);
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveMonth === 0 ? data.challenge : null, data.boosts || null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }
@@ -794,7 +789,7 @@ function renderPremiumUpsellBanner(containerId, show) {
       <div class="premium-upsell-icon">⭐</div>
       <div>
         <div class="premium-upsell-title">Fonctionnalité Premium</div>
-        <div class="premium-upsell-desc">Cette option est réservée aux membres Premium (semaines passées, classement D+). <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button></div>
+        <div class="premium-upsell-desc">Cette option est réservée aux membres Premium (mois passés, classement D+). <button class="btn-link-inline" onclick="openPremiumModal()">En savoir plus</button></div>
       </div>
     </div>`;
 }
@@ -898,8 +893,8 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
   if (boosts) {
     const { myBoostsRemaining, myBoostsGiven } = boosts;
     const label = myBoostsRemaining === 0
-      ? '⚡ Boosts utilisés cette semaine'
-      : `⚡ ${myBoostsRemaining} boost${myBoostsRemaining > 1 ? 's' : ''} restant${myBoostsRemaining > 1 ? 's' : ''} cette semaine`;
+      ? '⚡ Boosts utilisés ce mois-ci'
+      : `⚡ ${myBoostsRemaining} boost${myBoostsRemaining > 1 ? 's' : ''} restant${myBoostsRemaining > 1 ? 's' : ''} ce mois-ci`;
     boostInfoEl.textContent = label;
     boostInfoEl.classList.remove('hidden');
     boostInfoEl.className = `boost-info${myBoostsRemaining === 0 ? ' exhausted' : ''}`;
@@ -952,7 +947,7 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
     let boostBtnHtml = '';
     if (canBoost) {
       const disabled = alreadyBoosted || noBoostsLeft;
-      const title = alreadyBoosted ? 'Déjà boosté cette semaine' : noBoostsLeft ? 'Plus de boosts disponibles' : `Booster ${entry.athlete.firstname} (+5 pts)`;
+      const title = alreadyBoosted ? 'Déjà boosté ce mois-ci' : noBoostsLeft ? 'Plus de boosts disponibles' : `Booster ${entry.athlete.firstname} (+5 pts)`;
       boostBtnHtml = `<button class="btn-boost${disabled ? ' disabled' : ''}" data-target-id="${escapeHtml(entry.athlete.id)}" title="${title}" ${disabled ? 'disabled' : ''}>⚡</button>`;
     }
 

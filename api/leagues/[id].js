@@ -1,7 +1,7 @@
 import { getSession } from '../../lib/session.js';
-import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../../lib/strava.js';
+import { fetchMonthStats, fetchHistoricalMonthStats, getUser, getMonthStart, getWeekStart } from '../../lib/strava.js';
 import { computeProgress, CHALLENGE_DURATION_MS } from '../../lib/challenges.js';
-import { computePoints, BOOST_POINTS, BOOSTS_PER_WEEK } from '../../lib/points.js';
+import { computePoints, BOOST_POINTS, BOOSTS_PER_MONTH } from '../../lib/points.js';
 import { isPremium } from '../../lib/premium.js';
 import { checkRankingBadges } from '../../lib/badges.js';
 import redis from '../../lib/redis.js';
@@ -12,27 +12,27 @@ export default async function handler(req, res) {
 
   const requestedMetric = req.query.metric || 'distance';
   const { id } = req.query;
-  const requestedWeek = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+  // month=0 → mois en cours, 1 → mois dernier, 2-3 → premium
+  const requestedMonth = Math.max(0, Math.min(3, parseInt(req.query.month ?? '0', 10) || 0));
 
-  // Gate elevation sort + historical weeks behind premium
   const userIsPremium = await isPremium(session.athleteId);
   let metric = requestedMetric;
-  let week = requestedWeek;
+  let month  = requestedMonth;
   let premiumRequired = false;
+
   if (metric === 'elevation' && !userIsPremium) {
     metric = 'distance';
     premiumRequired = true;
   }
-  // Free: current week + last week (week 1). Weeks 2-4 require premium.
-  if (week > 1 && !userIsPremium) {
-    week = 0;
+  // Free: mois en cours + mois dernier. Mois 2-3 nécessitent Premium.
+  if (month > 1 && !userIsPremium) {
+    month = 0;
     premiumRequired = true;
   }
 
   const league = await redis.get(`league:${id}`);
   if (!league) return res.status(404).json({ error: 'Ligue introuvable' });
 
-  // Must be a member
   const isMember = await redis.sismember(`league:${id}:members`, session.athleteId);
   if (!isMember) return res.status(403).json({ error: 'Accès refusé' });
 
@@ -42,12 +42,12 @@ export default async function handler(req, res) {
   ]);
   const memberCount = memberIds.length;
 
-  // ── Auto-archive challenge from a previous week ────────────────────────────
+  // ── Auto-archive challenge from a previous month ───────────────────────────
   let challenge = rawChallenge;
   if (challenge?.startedAt) {
-    const currentWeekStart = getWeekStart(0);
-    const challengeStarted = new Date(challenge.startedAt);
-    if (challengeStarted < currentWeekStart) {
+    const currentMonthStart = getMonthStart(0);
+    const challengeStarted  = new Date(challenge.startedAt);
+    if (challengeStarted < currentMonthStart) {
       const histKey = `league:${id}:challenge:history`;
       const history = (await redis.get(histKey)) || [];
       const updated  = [{ ...challenge, archivedAt: new Date().toISOString() }, ...history].slice(0, 20);
@@ -59,16 +59,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // Load challenge history for response
   const challengeHistory = (await redis.get(`league:${id}:challenge:history`)) || [];
 
-  // ── Boosts (current week only) ─────────────────────────────────────────────
-  let boostsReceivedMap = {}; // athleteId → count
+  // ── Boosts (mois en cours uniquement) ─────────────────────────────────────
+  let boostsReceivedMap = {};
   let myBoostsGiven     = [];
-  if (week === 0) {
-    const weekStart  = getWeekStart(0).toISOString().slice(0, 10);
+  if (month === 0) {
+    const monthKey    = getMonthStart(0).toISOString().slice(0, 7); // YYYY-MM
     const boostValues = await Promise.all(
-      memberIds.map(mid => redis.get(`boost:${id}:${weekStart}:${mid}`))
+      memberIds.map(mid => redis.get(`boost:${id}:month:${monthKey}:${mid}`))
     );
     memberIds.forEach((mid, idx) => {
       const targets = boostValues[idx] || [];
@@ -84,11 +83,11 @@ export default async function handler(req, res) {
       try {
         const user = await getUser(athleteId);
         if (!user) return null;
-        const stats = week === 0
-          ? await fetchWeekStats(athleteId)
-          : await fetchHistoricalWeekStats(athleteId, week);
-        // Challenges only apply to the current week
-        const progress = (challenge && week === 0) ? computeProgress(stats, challenge) : null;
+        const stats = month === 0
+          ? await fetchMonthStats(athleteId)
+          : await fetchHistoricalMonthStats(athleteId, month);
+        // Défis : applicables seulement au mois en cours
+        const progress = (challenge && month === 0) ? computeProgress(stats, challenge) : null;
         const boostsReceived = boostsReceivedMap[athleteId] || 0;
         const boostPoints    = boostsReceived * BOOST_POINTS;
         const totals = {
@@ -123,15 +122,15 @@ export default async function handler(req, res) {
       return b.totals.distance - a.totals.distance;
     });
 
-  // Award ranking badges for current week and last week — sort by distance for fairness
-  if (week <= 1) {
+  // Badges de classement — basés sur le mois en cours et le mois dernier
+  if (month <= 1) {
     const byDistance = [...leaderboard].sort((a, b) => b.totals.distance - a.totals.distance);
-    checkRankingBadges(byDistance, id, getWeekStart(week).toISOString().slice(0, 10)).catch(console.error);
+    checkRankingBadges(byDistance, id, getMonthStart(month).toISOString().slice(0, 7)).catch(console.error);
   }
 
-  // Enrich challenge with expiry info before sending to client
+  // Enrichir le défi avec les infos d'expiry
   let challengeOut = null;
-  if (week === 0 && challenge) {
+  if (month === 0 && challenge) {
     const expiresAt = challenge.startedAt
       ? new Date(challenge.startedAt).getTime() + CHALLENGE_DURATION_MS
       : null;
@@ -147,8 +146,8 @@ export default async function handler(req, res) {
     leaderboard,
     challenge: challengeOut,
     challengeHistory,
-    week_start: getWeekStart(week).toISOString(),
+    week_start: getMonthStart(month).toISOString(),
     ...(premiumRequired ? { premiumRequired: true } : {}),
-    ...(week === 0 ? { boosts: { myBoostsGiven, myBoostsRemaining: BOOSTS_PER_WEEK - myBoostsGiven.length } } : {}),
+    ...(month === 0 ? { boosts: { myBoostsGiven, myBoostsRemaining: BOOSTS_PER_MONTH - myBoostsGiven.length } } : {}),
   });
 }

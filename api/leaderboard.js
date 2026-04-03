@@ -1,5 +1,5 @@
 import { getSession } from '../lib/session.js';
-import { fetchWeekStats, fetchHistoricalWeekStats, getUser, getWeekStart } from '../lib/strava.js';
+import { fetchMonthStats, fetchHistoricalMonthStats, getUser, getMonthStart } from '../lib/strava.js';
 import { isPremium } from '../lib/premium.js';
 import { computePoints } from '../lib/points.js';
 import redis from '../lib/redis.js';
@@ -12,16 +12,17 @@ export default async function handler(req, res) {
   const metric = req.query.metric || 'distance';
   if (!ALLOWED_METRICS.includes(metric)) return res.status(400).json({ error: 'Métrique invalide' });
 
-  const week = Math.max(0, Math.min(4, parseInt(req.query.week ?? '0', 10) || 0));
+  // month=0 → mois en cours, 1 → mois dernier, 2-3 → premium
+  const month   = Math.max(0, Math.min(3, parseInt(req.query.month ?? '0', 10) || 0));
   const premium = await isPremium(session.athleteId);
 
   if (metric === 'elevation' && !premium) {
     return res.status(403).json({ error: 'Le classement par dénivelé est réservé aux membres Premium.', premiumRequired: true });
   }
 
-  // Free: current week + last week (week 1). Weeks 2-4 require premium.
-  if (week > 1 && !premium) {
-    return res.status(403).json({ error: 'Les semaines 2 à 4 du classement sont réservées aux membres Premium.', premiumRequired: true });
+  // Free: mois en cours + mois dernier. Mois 2-3 nécessitent Premium.
+  if (month > 1 && !premium) {
+    return res.status(403).json({ error: 'Les mois précédents du classement sont réservés aux membres Premium.', premiumRequired: true });
   }
 
   try {
@@ -32,9 +33,9 @@ export default async function handler(req, res) {
         try {
           const user = await getUser(athleteId);
           if (!user) return null;
-          const stats = week === 0
-            ? await fetchWeekStats(athleteId)
-            : await fetchHistoricalWeekStats(athleteId, week);
+          const stats = month === 0
+            ? await fetchMonthStats(athleteId)
+            : await fetchHistoricalMonthStats(athleteId, month);
           const totals = { ...stats.totals, points: computePoints(stats.totals) };
           return {
             athlete: {
@@ -62,7 +63,7 @@ export default async function handler(req, res) {
         return b.totals.distance - a.totals.distance;
       });
 
-    res.json({ leaderboard, metric, week_start: getWeekStart(week).toISOString() });
+    res.json({ leaderboard, metric, week_start: getMonthStart(month).toISOString() });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
