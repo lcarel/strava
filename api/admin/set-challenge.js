@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       leagueId,
       leagueName: league.name,
     };
-    Promise.allSettled(memberIds.map(id => createNotification(id, notifPayload))).catch(() => {});
+    await Promise.allSettled(memberIds.map(id => createNotification(id, notifPayload)));
     sendPushToMany(memberIds, { ...notifPayload, icon: '/icons/apple-touch-icon.png' });
   }
 

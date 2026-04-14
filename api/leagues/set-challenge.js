@@ -60,8 +60,8 @@ export default async function handler(req, res) {
       leagueId,
       leagueName: league.name,
     };
-    // Notifs in-app + push en parallèle, non-bloquant
-    Promise.allSettled(targets.map(id => createNotification(id, notifPayload))).catch(() => {});
+    // Notifs in-app attendues, push fire-and-forget
+    await Promise.allSettled(targets.map(id => createNotification(id, notifPayload)));
     sendPushToMany(targets, { ...notifPayload, icon: '/icons/apple-touch-icon.png' });
   }
 

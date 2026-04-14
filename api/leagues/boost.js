@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   const updated = [...given, String(targetId)];
   await redis.set(boostKey, updated, { ex: 40 * 24 * 60 * 60 }); // TTL ~40 jours
 
-  // ── Notif + push (non-bloquant) ────────────────────────────────────────────
+  // ── Notif (attendue avant de répondre) + push (fire-and-forget) ───────────
   const giver = await getUser(session.athleteId).catch(() => null);
   const giverName = giver ? `${giver.athlete.firstname} ${giver.athlete.lastname}` : 'Un membre';
   const notifPayload = {
@@ -52,8 +52,8 @@ export default async function handler(req, res) {
     leagueId,
     leagueName: league.name,
   };
-  createNotification(targetId, notifPayload).catch(() => {});
+  await createNotification(targetId, notifPayload).catch(() => {});
   sendPush(targetId, { ...notifPayload, icon: '/icons/apple-touch-icon.png' }).catch(() => {});
 
-  return res.json({ ok: true, boostPoints: BOOST_POINTS, remaining: BOOSTS_PER_WEEK - updated.length });
+  return res.json({ ok: true, boostPoints: BOOST_POINTS, remaining: BOOSTS_PER_MONTH - updated.length });
 }
