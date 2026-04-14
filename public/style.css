@@ -908,9 +908,6 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 }
 .history-sport-detail { color: var(--muted); font-weight: 400; }
 
-@media (max-width: 600px) {
-  .history-stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-}
 
 /* ── Challenge button ────────────────────────────────────────────────────────── */
 .btn-challenge {
@@ -939,6 +936,7 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   margin-bottom: 1.5rem;
 }
 .challenge-banner-icon { font-size: 2rem; flex-shrink: 0; }
+.challenge-banner-info { flex: 1; min-width: 0; }
 .challenge-banner-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--orange); font-weight: 700; margin-bottom: 0.2rem; }
 .challenge-banner-name { font-weight: 800; font-size: 1.05rem; }
 .challenge-banner-desc { font-size: 0.82rem; color: var(--muted); margin-top: 0.1rem; }
@@ -1483,10 +1481,6 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 .push-allow-btn { background: var(--orange); color: #fff; border: none; border-radius: 8px; padding: 0.35rem 0.75rem; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
 .push-deny-btn  { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0.1rem 0.2rem; }
 
-@media (max-width: 600px) {
-  .notif-panel { width: calc(100vw - 2rem); right: -0.5rem; }
-  .push-prompt { white-space: normal; max-width: calc(100vw - 3rem); flex-wrap: wrap; }
-}
 
 /* ── Mobile menu button ──────────────────────────────────────────────────────── */
 .btn-mobile-menu {
@@ -1504,63 +1498,123 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
+
+  /* ── Header ── */
   header { padding: 0.75rem 1rem; gap: 0.5rem; }
   header h1 { display: none; }
+
+  /* ── Navigation ── */
   .tabs { padding: 0 0.5rem; }
-  main { padding: 1.5rem 1rem 5rem; }
+  .tab { padding: 0.75rem 1rem; font-size: 0.85rem; }
+
+  /* ── Main ── */
+  main { padding: 1.25rem 0.875rem 5rem; }
+
+  /* ── Stat cards : 2×2 grid ── */
+  .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; margin-bottom: 1.5rem; }
+  .card { padding: 1rem 0.75rem; }
+  .card-value { font-size: 1.6rem; }
+  .card-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+
+  /* ── Profile panel ── */
+  .profile-panel-body { padding: 1rem 1rem 3rem; }
+
+  /* ── Sport grid ── */
+  .sport-grid { grid-template-columns: 1fr; }
+
+  /* ── Activity items ── */
   .activity-stats { display: none; }
+
+  /* ── Historique stats : 2 colonnes ── */
+  .history-stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+
+  /* ── Leagues actions : full-width stacked ── */
+  .leagues-actions { flex-direction: column; gap: 0.6rem; }
+  .leagues-actions .btn-action { justify-content: center; width: 100%; }
+
+  /* ── Grille de ligues : 1 colonne ── */
+  .leagues-grid { grid-template-columns: 1fr; }
+  .league-card-name { white-space: normal; }
+
+  /* ── Leaderboard ── */
   .lb-secondary { display: none; }
+  .lb-list { gap: 0.5rem; }
+  .leaderboard-header { flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+
+  /* ── Metric selector ── */
   .metric-btns { gap: 0.3rem; }
-  .metric-btn { padding: 0.3rem 0.65rem; font-size: 0.78rem; }
-  .leaderboard-header { flex-direction: column; }
-  .league-detail-header { flex-direction: column; }
+  .metric-btn { padding: 0.35rem 0.65rem; font-size: 0.8rem; min-height: 34px; }
+
+  /* ── League detail header ── */
+  .league-detail-header { flex-direction: column; gap: 0.75rem; }
+
+  /* ── Feedback FAB ── */
   .feedback-fab { bottom: 1rem; right: 1rem; }
 
-  /* Utilitaires desktop/mobile */
+  /* ── Utilitaires ── */
   .hide-mobile { display: none; }
   .show-mobile { display: inline; }
 
-  /* lb-item : layout 2 lignes sur mobile */
+  /* ── lb-item : layout 2 lignes ── */
   .lb-item { padding: 0.65rem 0.75rem; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
   .lb-avatar { width: 36px; height: 36px; font-size: 1rem; }
   .lb-rank { font-size: 1.1rem; width: 1.5rem; }
-  .lb-metric-value { font-size: 1.05rem; }
-  .lb-metric-label { font-size: 0.68rem; }
-  .lb-pts-detail { font-size: 0.65rem; }
-
-  /* Nom : autorise le retour à la ligne sur mobile */
+  .lb-metric-value { font-size: 1.1rem; }
+  .lb-metric-label { font-size: 0.7rem; }
+  .lb-pts-detail { font-size: 0.68rem; line-height: 1.4; }
   .lb-name { white-space: normal; font-size: 0.92rem; }
 
-  /* Boutons actions → deuxième ligne, alignés à droite */
+  /* ── lb-actions : 2ème ligne alignée à droite ── */
   .lb-actions {
     order: 10;
     width: 100%;
     justify-content: flex-end;
-    padding-left: calc(1.5rem + 36px + 1rem);
+    padding-left: calc(1.5rem + 36px + 0.5rem);
     margin-top: 0.1rem;
   }
-  .btn-boost, .btn-kick { padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 6px; }
+  .btn-boost, .btn-kick { padding: 0.3rem 0.6rem; font-size: 0.82rem; border-radius: 6px; }
 
-  /* Boutons gestion ligue */
-  .league-detail-actions { width: 100%; }
-  .league-detail-actions button { flex: 1; }
+  /* ── Boutons gestion ligue ── */
+  .league-detail-actions { width: 100%; gap: 0.4rem; }
+  .league-detail-actions button { flex: 1; font-size: 0.82rem; padding: 0.45rem 0.6rem; }
 
-  /* Points info : version courte déjà via .show-mobile */
-  .points-info { font-size: 0.75rem; }
+  /* ── Points info ── */
+  .points-info { font-size: 0.75rem; padding: 0.45rem 0.65rem; }
 
-  /* Challenge history : date en dessous */
+  /* ── Challenge history ── */
   .challenge-history-card { flex-wrap: wrap; }
   .challenge-history-date { width: 100%; padding-left: calc(1.4rem + 0.85rem); }
 
-  /* Boost badge */
+  /* ── Boost ── */
   .boost-badge { font-size: 0.65rem; }
+  .boost-info { font-size: 0.8rem; }
 
-  /* Challenge banner */
-  .challenge-timer { font-size: 1.1rem; }
-  .challenge-banner { flex-wrap: wrap; gap: 0.6rem; }
+  /* ── Challenge banner ── */
+  .challenge-banner { flex-wrap: wrap; gap: 0.5rem; padding: 0.85rem 1rem; }
+  .challenge-banner-info { flex: 1; min-width: 0; }
+  .challenge-timer {
+    margin-left: 0;
+    width: 100%;
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 0.3rem 0.5rem;
+    background: rgba(252,76,2,0.08);
+    border-radius: 8px;
+  }
+  .challenge-timer.expired { font-size: 0.85rem; padding: 0.25rem 0.5rem; }
 
+  /* ── Modals ── */
+  .modal-box { padding: 1.5rem; border-radius: 14px; }
+  .onboarding-box { padding: 1.75rem 1.25rem 1.5rem; }
+  .onboarding-title { font-size: 1.3rem; }
+  .onboarding-desc { font-size: 0.88rem; margin-bottom: 1.5rem; }
+
+  /* ── Notifications ── */
+  .notif-panel { width: calc(100vw - 2rem); right: -0.5rem; }
+  .push-prompt { white-space: normal; max-width: calc(100vw - 3rem); flex-wrap: wrap; }
+
+  /* ── Mobile menu ── */
   .btn-mobile-menu { display: block; }
-
   .header-right {
     display: none;
     flex-direction: column;
@@ -1578,7 +1632,6 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
     z-index: 100;
   }
   .header-right.open { display: flex; }
-
   .header-right .athlete-badge,
   .header-right .btn-logout,
   .header-right .btn-theme {
@@ -1587,8 +1640,5 @@ main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
     justify-content: flex-start;
     border-radius: 6px;
   }
-  .header-right .premium-badge {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.82rem;
-  }
+  .header-right .premium-badge { padding: 0.4rem 0.6rem; font-size: 0.82rem; }
 }
