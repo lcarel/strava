@@ -16,10 +16,13 @@ export default async function handler(req, res) {
 
     const leagues = await Promise.all(
       uniqueLeagueIds.map(async (id) => {
-        const league = await redis.get(`league:${id}`);
+        const [league, memberCount, challenge] = await Promise.all([
+          redis.get(`league:${id}`),
+          redis.scard(`league:${id}:members`),
+          redis.get(`league:${id}:challenge`),
+        ]);
         if (!league) return null;
-        const memberCount = await redis.scard(`league:${id}:members`);
-        return { ...league, memberCount };
+        return { ...league, memberCount, currentChallenge: challenge ?? null };
       })
     );
 

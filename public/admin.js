@@ -12,6 +12,84 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// ── Challenges data ───────────────────────────────────────────────────────────
+let _challenges = [];
+let _categories = [];
+
+async function loadChallengesData() {
+  try {
+    const data = await fetch('/api/challenges').then(r => r.json());
+    _challenges = data.challenges || [];
+    _categories = data.categories || [];
+    populateChallengeSelect();
+  } catch (err) {
+    console.error('Challenges load error:', err);
+  }
+}
+
+function populateChallengeSelect() {
+  const sel = document.getElementById('challenge-select');
+  // Keep the first "none" option
+  sel.innerHTML = '<option value="">— Aucun défi (annuler) —</option>';
+  for (const cat of _categories) {
+    const group = document.createElement('optgroup');
+    group.label = `${cat.emoji} ${cat.label}`;
+    for (const id of cat.ids) {
+      const def = _challenges.find(c => c.id === id);
+      if (!def) continue;
+      const opt = document.createElement('option');
+      opt.value = def.id;
+      opt.textContent = `${def.emoji} ${def.label}${def.premium ? ' ⭐' : ''}`;
+      group.appendChild(opt);
+    }
+    sel.appendChild(group);
+  }
+}
+
+// ── Challenge modal ───────────────────────────────────────────────────────────
+let _challengeLeagueId = null;
+
+function openChallengeModal(leagueId, leagueName, currentChallengeId) {
+  _challengeLeagueId = leagueId;
+  document.getElementById('challenge-modal-league-name').textContent = leagueName;
+  const sel = document.getElementById('challenge-select');
+  sel.value = currentChallengeId || '';
+  document.getElementById('challenge-modal').classList.remove('hidden');
+}
+
+document.getElementById('challenge-modal-cancel').addEventListener('click', () => {
+  document.getElementById('challenge-modal').classList.add('hidden');
+});
+
+document.getElementById('challenge-modal-confirm').addEventListener('click', async () => {
+  const challengeId = document.getElementById('challenge-select').value;
+  if (!_challengeLeagueId) return;
+
+  const btn = document.getElementById('challenge-modal-confirm');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const res = await fetch('/api/admin/set-challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: _challengeLeagueId, challengeId: challengeId || null }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('challenge-modal').classList.add('hidden');
+      loadLeagues();
+    } else {
+      alert(data.error || 'Erreur');
+    }
+  } catch (err) {
+    alert('Erreur réseau');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lancer';
+  }
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   const status = await fetch('/api/status').then(r => r.json());
@@ -24,6 +102,7 @@ async function init() {
   }
 
   document.getElementById('admin-app').classList.remove('hidden');
+  loadChallengesData();
   loadStats();
   loadUsers();
   loadFeedbacks();
@@ -247,15 +326,26 @@ async function loadLeagues() {
 
     for (const league of data.leagues) {
       const tr = document.createElement('tr');
+      const ch = league.currentChallenge;
+      const challengeCell = ch
+        ? `<span class="badge-challenge">${escapeHtml(ch.emoji || '')} ${escapeHtml(ch.label)}</span>`
+        : `<span class="badge-no-challenge">Aucun</span>`;
+
       tr.innerHTML = `
         <td style="font-weight:600">${escapeHtml(league.name)}</td>
         <td><span style="font-family:monospace;color:var(--orange);letter-spacing:2px">${escapeHtml(league.code)}</span></td>
         <td class="muted">${league.memberCount}</td>
-        <td class="muted">${fmtDate(league.createdAt)}</td>
+        <td>${challengeCell}</td>
         <td>
-          <button class="btn-danger btn-delete-league">Supprimer</button>
+          <div class="action-cell">
+            <button class="btn-ok btn-set-challenge">🎯 Défi</button>
+            <button class="btn-danger btn-delete-league">Supprimer</button>
+          </div>
         </td>`;
 
+      tr.querySelector('.btn-set-challenge').addEventListener('click', () =>
+        openChallengeModal(league.id, league.name, ch?.id)
+      );
       tr.querySelector('.btn-delete-league').addEventListener('click', () => deleteLeague(league.id, league.name));
       tbody.appendChild(tr);
     }
