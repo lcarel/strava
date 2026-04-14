@@ -34,7 +34,6 @@ let currentIsAdmin = false;
 let currentIsPremium = false;
 let currentMetric = 'distance';
 let currentLbMonth = 0;
-let currentLeagueMetric = 'points';
 let currentLeagueMonth = 0;
 let currentLeagueId = null;
 let currentLeague = null;
@@ -376,18 +375,6 @@ document.querySelectorAll('#lb-metric-btns .metric-btn').forEach(btn => {
   });
 });
 
-document.querySelectorAll('#league-metric-btns .metric-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.dataset.metric === 'elevation' && !currentIsPremium) {
-      openPremiumModal();
-      return;
-    }
-    document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentLeagueMetric = btn.dataset.metric;
-    if (currentLeagueId) loadLeagueDetail(currentLeagueId);
-  });
-});
 
 // ── Mobile menu ───────────────────────────────────────────────────────────────
 const _mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -743,10 +730,6 @@ function showLeaguesList() {
   currentLeagueId = null;
   currentLeague = null;
   currentLeagueMonth = 0;
-  currentLeagueMetric = 'points';
-  document.querySelectorAll('#league-metric-btns .metric-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.metric === 'points');
-  });
 }
 
 // ── League detail ─────────────────────────────────────────────────────────────
@@ -764,17 +747,16 @@ async function loadLeagueDetail(id) {
   document.getElementById('league-lb-empty').classList.add('hidden');
 
   try {
-    const data = await fetch(`/api/leagues/${id}?metric=${currentLeagueMetric}&month=${currentLeagueMonth}`).then(r => r.json());
+    const data = await fetch(`/api/leagues/${id}?metric=points&month=${currentLeagueMonth}`).then(r => r.json());
     if (data.error) throw new Error(data.error);
     if (data.league) currentLeague = { ...currentLeague, ...data.league };
     document.getElementById('league-week-label').textContent = monthLabel(data.week_start);
     const activeChallenge = (currentLeagueMonth === 0 && data.challenge && !data.challenge.expired) ? data.challenge : null;
     renderChallengeBanner(activeChallenge);
     renderChallengeHistory(data.challengeHistory || []);
-    const effectiveMetric = (currentLeagueMetric === 'elevation' && data.premiumRequired) ? 'distance' : currentLeagueMetric;
-    const effectiveMonth  = (currentLeagueMonth > 0 && data.premiumRequired) ? 0 : currentLeagueMonth;
+    const effectiveMonth = (currentLeagueMonth > 0 && data.premiumRequired) ? 0 : currentLeagueMonth;
     renderPremiumUpsellBanner('league-premium-upsell', !!data.premiumRequired);
-    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMetric, effectiveMonth === 0 ? data.challenge : null, data.boosts || null);
+    renderLeagueLeaderboard(data.leaderboard.map(filterRunningData), effectiveMonth === 0 ? data.challenge : null, data.boosts || null);
   } catch (err) { console.error(err); }
   finally { document.getElementById('league-lb-loading').classList.add('hidden'); }
 }
@@ -882,10 +864,10 @@ document.getElementById('history-toggle-btn').addEventListener('click', () => {
   icon.textContent = open ? '▼' : '▲';
 });
 
-function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
+function renderLeagueLeaderboard(leaderboard, challenge, boosts) {
   const list = document.getElementById('league-lb-list');
   const empty = document.getElementById('league-lb-empty');
-  document.getElementById('league-points-info').classList.toggle('hidden', metric !== 'points');
+  document.getElementById('league-points-info').classList.remove('hidden');
   list.innerHTML = '';
 
   // Boost info bar
@@ -907,7 +889,7 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
   const isManager = currentLeague && (String(currentLeague.createdBy) === String(currentAthleteId) || currentIsAdmin);
   const creatorId = currentLeague ? String(currentLeague.createdBy) : null;
 
-  const allZero = leaderboard.every(e => metricRaw(e.totals, metric) === 0);
+  const allZero = leaderboard.every(e => (e.totals.points ?? 0) === 0);
   if (allZero) {
     leaderboard = [...leaderboard].sort((a, b) => {
       const nameA = `${a.athlete.firstname} ${a.athlete.lastname}`.toLowerCase();
@@ -967,9 +949,9 @@ function renderLeagueLeaderboard(leaderboard, metric, challenge, boosts) {
         <span class="lb-sec-item"><strong>${fmtTime(entry.totals.moving_time)}</strong></span>
       </div>
       <div class="lb-metric">
-        <div class="lb-metric-value">${metricValue(entry.totals, metric)}</div>
-        <div class="lb-metric-label">${metricLabel(metric)}</div>
-        ${metric === 'points' ? `<div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>` : ''}
+        <div class="lb-metric-value">${metricValue(entry.totals, 'points')}</div>
+        <div class="lb-metric-label">points</div>
+        <div class="lb-pts-detail">${pointsDetail(entry.totals)}</div>
       </div>
       ${(canKick || (canBoost)) ? `<div class="lb-actions">
         ${canKick ? `<button class="btn-kick" data-member-id="${escapeHtml(entry.athlete.id)}" title="Exclure ce membre">✕</button>` : ''}
