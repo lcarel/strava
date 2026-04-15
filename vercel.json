@@ -1,5 +1,8 @@
 {
   "outputDirectory": "public",
+  "crons": [
+    { "path": "/api/cron/challenge-reminder", "schedule": "0 * * * *" }
+  ],
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" }
   ],
